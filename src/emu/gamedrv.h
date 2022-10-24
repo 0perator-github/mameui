@@ -40,6 +40,13 @@ struct machine_flags
 		ROT180              = FLIP_X | FLIP_Y,
 		ROT270              = FLIP_Y | SWAP_XY,
 
+#if defined(MAMEUI_WINAPP) // MAMEUI: commit 0562745 removed system type flags.
+		TYPE_ARCADE         = 0x0000'0008,   // coin-operated machine for public use
+		TYPE_CONSOLE        = 0x0000'0010,   // console system
+		TYPE_COMPUTER       = 0x0000'0020,   // any kind of computer including home computers, minis, calculators, ...
+		TYPE_OTHER          = 0x0000'0038,   // any other emulated system (e.g. clock, satellite receiver, ...)
+		MASK_TYPE           = TYPE_OTHER,
+#endif
 		NO_COCKTAIL         = 0x0000'0040,  // screen flip support is missing
 		IS_BIOS_ROOT        = 0x0000'0080,  // this driver entry is a BIOS root
 		REQUIRES_ARTWORK    = 0x0000'0100,  // requires external artwork for key game elements
@@ -70,6 +77,13 @@ constexpr u64 MACHINE_UNOFFICIAL                = machine_flags::UNOFFICIAL;    
 constexpr u64 MACHINE_NO_SOUND_HW               = machine_flags::NO_SOUND_HW;               ///< The system has no sound output capability
 constexpr u64 MACHINE_MECHANICAL                = machine_flags::MECHANICAL;                ///< The system depends on mechanical features for key functionality
 constexpr u64 MACHINE_IS_INCOMPLETE             = machine_flags::IS_INCOMPLETE;             ///< The system represents an incomplete prototype
+#if defined(MAMEUI_WINAPP) // MAMEUI: commit 0562745 removed system type flags.
+constexpr u64 MACHINE_TYPE_ARCADE = machine_flags::TYPE_ARCADE;
+constexpr u64 MACHINE_TYPE_CONSOLE = machine_flags::TYPE_CONSOLE;
+constexpr u64 MACHINE_TYPE_COMPUTER = machine_flags::TYPE_COMPUTER;
+constexpr u64 MACHINE_TYPE_OTHER = machine_flags::TYPE_OTHER;
+constexpr u64 MACHINE_TYPE_MASK = machine_flags::TYPE_OTHER;
+#endif
 
 // flags that map to device emulation and feature flags
 constexpr u64 MACHINE_NOT_WORKING               = 0x00000001'00000000;                      ///< Imperfect emulation prevents using the system as intended
@@ -199,6 +213,344 @@ public:
 /// \addtogroup machinedef
 /// \{
 
+#if defined(MAMEUI_WINAPP) // MAMEUI: commit 0562745 removed system type flags.
+/// \brief Define a "game" system
+///
+/// Use this macro to define most systems intended for public use,
+/// including arcade games, gambling machines, vending machines, and
+/// information kiosks.  Must be used in the global namespace.
+///
+/// Creates an appropriately named and populated #game_driver structure
+/// describing the system.
+/// \param YEAR The year that the system was first made available.  Must
+///   be a token containing only the digits zero to nine, question mark
+///   and plus sign.
+/// \param NAME The short name of the system, used for identification,
+///   and in filesystem paths for assets and data.  Must be a token no
+///   longer than sixteen characters, containing only ASCII lowercase
+///   letters, digits and underscores.  Must be globally unique across
+///   systems and devices.
+/// \param PARENT Short name of the parent or BIOS system if applicable,
+///   or a single digit zero otherwise.
+/// \param MACHINE Function used to buid machine configuration for the
+///   system.  Must be a public member function of the system device
+///   class (\p CLASS argument), returning void and taking a reference
+///   to a #machine_config object as a parameter.
+/// \param INPUT Input port definitions for the root device of the
+///   system, usually defined using #INPUT_PORTS_START and associated
+///   macros.
+/// \param CLASS Class to instantiate as the root device of the system.
+///   Must be an implementation of #driver_device.
+/// \param INIT Initialisation function called after all child devices
+///   have started, but before the driver start functions are called.
+///   Often used for tasks like decrypting ROMs.  Must be a public
+///   member function of the system device class (\p CLASS argument),
+///   returning void and accepting no parameters.  The function
+///   #driver_device::empty_init is supplied for systems that don't need
+///   to perform additional tasks.
+/// \param MONITOR Screen orientation flags applied to all screens in
+///   the system, after the individual screens' orientation flags are
+///   applied.  Usually one #ROT0, #ROT90, #ROT180 or #ROT270.
+/// \param COMPANY Name of the developer or distributor of the system.
+///   Must be a string.
+/// \param FULLNAME Display name for the system.  Must be a string, and
+///   must be globally unique across systems and devices.
+/// \param FLAGS Bitwise combination of emulation status flags for the
+///   system, in addition to flags supplied by the system device class
+///   (see #device_t::unemulated_features and
+///   #device_t::imperfect_features).  It is advisable to supply
+///   unemulated and imperfectly emulated feature flags that apply to
+///   all systems implemented using the class in the class itself to
+///   avoid repetition.
+/// \sa GAMEL CONS COMP SYST
+#define GAME(YEAR, NAME, PARENT, MACHINE, INPUT, CLASS, INIT, MONITOR, COMPANY, FULLNAME, FLAGS) \
+GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+extern game_driver const GAME_NAME(NAME)                                \
+{                                                                       \
+	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
+	#PARENT,                                                            \
+	#YEAR,                                                              \
+	COMPANY,                                                            \
+	[] (machine_config &config, device_t &owner) { downcast<CLASS &>(owner).MACHINE(config); }, \
+	INPUT_PORTS_NAME(INPUT),                                            \
+	[] (device_t &owner) { downcast<CLASS &>(owner).INIT(); },          \
+	ROM_NAME(NAME),                                                     \
+	nullptr,                                                            \
+	nullptr,                                                            \
+	machine_flags::type(u32((MONITOR) | (FLAGS) | (MACHINE_TYPE_ARCADE))),\
+	#NAME                                                               \
+};
+
+
+/// \brief Define a "game" system with an additional internal layout
+///
+/// Equivalent to the #GAME macro, but with the additional ability to
+/// supply system-specific internal artwork layout data.  Views from the
+/// system-specific layout are available in addition to any views from
+/// layout data specified in the machine configuration.  Must be used in
+/// the global namespace.
+///
+/// Creates an appropriately named and populated #game_driver structure
+/// describing the system.
+/// \param YEAR The year that the system was first made available.  Must
+///   be a token containing only the digits zero to nine, question mark
+///   and plus sign.
+/// \param NAME The short name of the system, used for identification,
+///   and in filesystem paths for assets and data.  Must be a token no
+///   longer than sixteen characters, containing only ASCII lowercase
+///   letters, digits and underscores.  Must be globally unique across
+///   systems and devices.
+/// \param PARENT Short name of the parent or BIOS system if applicable,
+///   or a single digit zero otherwise.
+/// \param MACHINE Function used to buid machine configuration for the
+///   system.  Must be a public member function of the system device
+///   class (\p CLASS argument), returning void and taking a reference
+///   to a #machine_config object as a parameter.
+/// \param INPUT Input port definitions for the root device of the
+///   system, usually defined using #INPUT_PORTS_START and associated
+///   macros.
+/// \param CLASS Class to instantiate as the root device of the system.
+///   Must be an implementation of #driver_device.
+/// \param INIT Initialisation function called after all child devices
+///   have started, but before the driver start functions are called.
+///   Often used for tasks like decrypting ROMs.  Must be a public
+///   member function of the system device class (\p CLASS argument),
+///   returning void and accepting no parameters.  The function
+///   #driver_device::empty_init is supplied for systems that don't need
+///   to perform additional tasks.
+/// \param MONITOR Screen orientation flags applied to all screens in
+///   the system, after the individual screens' orientation flags are
+///   applied.  Usually one #ROT0, #ROT90, #ROT180 or #ROT270.
+/// \param COMPANY Name of the developer or distributor of the system.
+///   Must be a string.
+/// \param FULLNAME Display name for the system.  Must be a string, and
+///   must be globally unique across systems and devices.
+/// \param FLAGS Bitwise combination of emulation status flags for the
+///   system, in addition to flags supplied by the system device class
+///   (see #device_t::unemulated_features and
+///   #device_t::imperfect_features).  It is advisable to supply
+///   unemulated and imperfectly emulated feature flags that apply to
+///   all systems implemented using the class in the class itself to
+///   avoid repetition.
+/// \param LAYOUT An #internal_layout structure providing additional
+///   internal artwork for the system.
+/// \sa GAME CONS COMP SYST
+#define GAMEL(YEAR, NAME, PARENT, MACHINE, INPUT, CLASS, INIT, MONITOR, COMPANY, FULLNAME, FLAGS, LAYOUT) \
+GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+extern game_driver const GAME_NAME(NAME)                                \
+{                                                                       \
+	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
+	#PARENT,                                                            \
+	#YEAR,                                                              \
+	COMPANY,                                                            \
+	[] (machine_config &config, device_t &owner) { downcast<CLASS &>(owner).MACHINE(config); }, \
+	INPUT_PORTS_NAME(INPUT),                                            \
+	[] (device_t &owner) { downcast<CLASS &>(owner).INIT(); },          \
+	ROM_NAME(NAME),                                                     \
+	nullptr,                                                            \
+	&LAYOUT,                                                            \
+	machine_flags::type(u32((MONITOR) | (FLAGS) | (MACHINE_TYPE_ARCADE))),\
+	#NAME                                                               \
+};
+
+
+/// \brief Define a "console" system
+///
+/// Use this macro to define appliance-like entertainment systems
+/// designed for domestic use.  Must be used in the global namespace.
+///
+/// Creates an appropriately named and populated #game_driver structure
+/// describing the system.
+/// \param YEAR The year that the system was first made available.  Must
+///   be a token containing only the digits zero to nine, question mark
+///   and plus sign.
+/// \param NAME The short name of the system, used for identification,
+///   and in filesystem paths for assets and data.  Must be a token no
+///   longer than sixteen characters, containing only ASCII lowercase
+///   letters, digits and underscores.  Must be globally unique across
+///   systems and devices.
+/// \param PARENT Short name of the parent or BIOS system if applicable,
+///   or a single digit zero otherwise.
+/// \param COMPAT Short name of a system that this system is compatible
+///   with if applicable, or a single digit zero otherwise.
+/// \param MACHINE Function used to buid machine configuration for the
+///   system.  Must be a public member function of the system device
+///   class (\p CLASS argument), returning void and taking a reference
+///   to a #machine_config object as a parameter.
+/// \param INPUT Input port definitions for the root device of the
+///   system, usually defined using #INPUT_PORTS_START and associated
+///   macros.
+/// \param CLASS Class to instantiate as the root device of the system.
+///   Must be an implementation of #driver_device.
+/// \param INIT Initialisation function called after all child devices
+///   have started, but before the driver start functions are called.
+///   Often used for tasks like decrypting ROMs.  Must be a public
+///   member function of the system device class (\p CLASS argument),
+///   returning void and accepting no parameters.  The function
+///   #driver_device::empty_init is supplied for systems that don't need
+///   to perform additional tasks.
+/// \param COMPANY Name of the developer or distributor of the system.
+///   Must be a string.
+/// \param FULLNAME Display name for the system.  Must be a string, and
+///   must be globally unique across systems and devices.
+/// \param FLAGS Bitwise combination of emulation status flags for the
+///   system, in addition to flags supplied by the system device class
+///   (see #device_t::unemulated_features and
+///   #device_t::imperfect_features).  It is advisable to supply
+///   unemulated and imperfectly emulated feature flags that apply to
+///   all systems implemented using the class in the class itself to
+///   avoid repetition.  Screen orientation flags may be included here.
+/// \sa GAME GAMEL COMP SYST
+#define CONS(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, COMPANY, FULLNAME, FLAGS) \
+GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+extern game_driver const GAME_NAME(NAME)                                \
+{                                                                       \
+	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
+	#PARENT,                                                            \
+	#YEAR,                                                              \
+	COMPANY,                                                            \
+	[] (machine_config &config, device_t &owner) { downcast<CLASS &>(owner).MACHINE(config); }, \
+	INPUT_PORTS_NAME(INPUT),                                            \
+	[] (device_t &owner) { downcast<CLASS &>(owner).INIT(); },          \
+	ROM_NAME(NAME),                                                     \
+	#COMPAT,                                                            \
+	nullptr,                                                            \
+	machine_flags::type(u32(ROT0 | (FLAGS) | (MACHINE_TYPE_CONSOLE))),    \
+	#NAME                                                               \
+};
+
+
+/// \brief Define a "computer" system
+///
+/// Use this macro to define computer-like systems.  Must be used in the
+/// global namespace.
+///
+/// Creates an appropriately named and populated #game_driver structure
+/// describing the system.
+/// \param YEAR The year that the system was first made available.  Must
+///   be a token containing only the digits zero to nine, question mark
+///   and plus sign.
+/// \param NAME The short name of the system, used for identification,
+///   and in filesystem paths for assets and data.  Must be a token no
+///   longer than sixteen characters, containing only ASCII lowercase
+///   letters, digits and underscores.  Must be globally unique across
+///   systems and devices.
+/// \param PARENT Short name of the parent or BIOS system if applicable,
+///   or a single digit zero otherwise.
+/// \param COMPAT Short name of a system that this system is compatible
+///   with if applicable, or a single digit zero otherwise.
+/// \param MACHINE Function used to buid machine configuration for the
+///   system.  Must be a public member function of the system device
+///   class (\p CLASS argument), returning void and taking a reference
+///   to a #machine_config object as a parameter.
+/// \param INPUT Input port definitions for the root device of the
+///   system, usually defined using #INPUT_PORTS_START and associated
+///   macros.
+/// \param CLASS Class to instantiate as the root device of the system.
+///   Must be an implementation of #driver_device.
+/// \param INIT Initialisation function called after all child devices
+///   have started, but before the driver start functions are called.
+///   Often used for tasks like decrypting ROMs.  Must be a public
+///   member function of the system device class (\p CLASS argument),
+///   returning void and accepting no parameters.  The function
+///   #driver_device::empty_init is supplied for systems that don't need
+///   to perform additional tasks.
+/// \param COMPANY Name of the developer or distributor of the system.
+///   Must be a string.
+/// \param FULLNAME Display name for the system.  Must be a string, and
+///   must be globally unique across systems and devices.
+/// \param FLAGS Bitwise combination of emulation status flags for the
+///   system, in addition to flags supplied by the system device class
+///   (see #device_t::unemulated_features and
+///   #device_t::imperfect_features).  It is advisable to supply
+///   unemulated and imperfectly emulated feature flags that apply to
+///   all systems implemented using the class in the class itself to
+///   avoid repetition.  Screen orientation flags may be included here.
+/// \sa GAME GAMEL CONS SYST
+#define COMP(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, COMPANY, FULLNAME, FLAGS) \
+GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+extern game_driver const GAME_NAME(NAME)                                \
+{                                                                       \
+	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
+	#PARENT,                                                            \
+	#YEAR,                                                              \
+	COMPANY,                                                            \
+	[] (machine_config &config, device_t &owner) { downcast<CLASS &>(owner).MACHINE(config); }, \
+	INPUT_PORTS_NAME(INPUT),                                            \
+	[] (device_t &owner) { downcast<CLASS &>(owner).INIT(); },          \
+	ROM_NAME(NAME),                                                     \
+	#COMPAT,                                                            \
+	nullptr,                                                            \
+	machine_flags::type(u32(ROT0 | (FLAGS) | (MACHINE_TYPE_COMPUTER))),   \
+	#NAME                                                               \
+};
+
+
+/// \brief Define a generic system
+///
+/// Use this macro to define miscellaneous systems that don't fall into
+/// one of the other categories.  Must be used in the global namespace.
+///
+/// Creates an appropriately named and populated #game_driver structure
+/// describing the system.
+/// \param YEAR The year that the system was first made available.  Must
+///   be a token containing only the digits zero to nine, question mark
+///   and plus sign.
+/// \param NAME The short name of the system, used for identification,
+///   and in filesystem paths for assets and data.  Must be a token no
+///   longer than sixteen characters, containing only ASCII lowercase
+///   letters, digits and underscores.  Must be globally unique across
+///   systems and devices.
+/// \param PARENT Short name of the parent or BIOS system if applicable,
+///   or a single digit zero otherwise.
+/// \param COMPAT Short name of a system that this system is compatible
+///   with if applicable, or a single digit zero otherwise.
+/// \param MACHINE Function used to buid machine configuration for the
+///   system.  Must be a public member function of the system device
+///   class (\p CLASS argument), returning void and taking a reference
+///   to a #machine_config object as a parameter.
+/// \param INPUT Input port definitions for the root device of the
+///   system, usually defined using #INPUT_PORTS_START and associated
+///   macros.
+/// \param CLASS Class to instantiate as the root device of the system.
+///   Must be an implementation of #driver_device.
+/// \param INIT Initialisation function called after all child devices
+///   have started, but before the driver start functions are called.
+///   Often used for tasks like decrypting ROMs.  Must be a public
+///   member function of the system device class (\p CLASS argument),
+///   returning void and accepting no parameters.  The function
+///   #driver_device::empty_init is supplied for systems that don't need
+///   to perform additional tasks.
+/// \param COMPANY Name of the developer or distributor of the system.
+///   Must be a string.
+/// \param FULLNAME Display name for the system.  Must be a string, and
+///   must be globally unique across systems and devices.
+/// \param FLAGS Bitwise combination of emulation status flags for the
+///   system, in addition to flags supplied by the system device class
+///   (see #device_t::unemulated_features and
+///   #device_t::imperfect_features).  It is advisable to supply
+///   unemulated and imperfectly emulated feature flags that apply to
+///   all systems implemented using the class in the class itself to
+///   avoid repetition.  Screen orientation flags may be included here.
+/// \sa GAME GAMEL CONS COMP
+#define SYST(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, COMPANY, FULLNAME, FLAGS) \
+GAME_DRIVER_TRAITS(NAME, FULLNAME)                                      \
+extern game_driver const GAME_NAME(NAME)                                \
+{                                                                       \
+	GAME_DRIVER_TYPE(NAME, CLASS, FLAGS),                               \
+	#PARENT,                                                            \
+	#YEAR,                                                              \
+	COMPANY,                                                            \
+	[] (machine_config &config, device_t &owner) { downcast<CLASS &>(owner).MACHINE(config); }, \
+	INPUT_PORTS_NAME(INPUT),                                            \
+	[] (device_t &owner) { downcast<CLASS &>(owner).INIT(); },          \
+	ROM_NAME(NAME),                                                     \
+	#COMPAT,                                                            \
+	nullptr,                                                            \
+	machine_flags::type(u32(ROT0 | (FLAGS) | (MACHINE_TYPE_OTHER))),      \
+	#NAME                                                               \
+};
+#else
 /// \brief Define a system
 ///
 /// Must be used in the global namespace.
@@ -408,6 +760,7 @@ extern game_driver const GAME_NAME(NAME)                                \
 
 #define COMP(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, COMPANY, FULLNAME, FLAGS) \
 		SYST(YEAR, NAME, PARENT, COMPAT, MACHINE, INPUT, CLASS, INIT, COMPANY, FULLNAME, FLAGS)
+#endif
 
 /// \}
 

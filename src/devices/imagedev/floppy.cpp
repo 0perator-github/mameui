@@ -215,7 +215,11 @@ floppy_connector::floppy_connector(const machine_config &mconfig, const char *ta
 	device_t(mconfig, FLOPPY_CONNECTOR, tag, owner, clock),
 	device_slot_interface(mconfig, *this),
 	formats(nullptr),
+#if defined(MAMEUI_WINAPP) // MAMEUI: setting this to true is purely an aesthetic preference, probably patched by Robbbert.
+	m_enable_sound(true),
+#else
 	m_enable_sound(false),
+#endif
 	m_sectoring_type(floppy_image::SOFT)
 {
 }
@@ -273,7 +277,11 @@ floppy_image_device::floppy_image_device(const machine_config &mconfig, device_t
 		m_image_dirty(false),
 		m_track_dirty(false),
 		m_ready_counter(0),
+#if defined(MAMEUI_WINAPP) // MAMEUI: m_enable_sound(true) necessitated that this also be true.
+		m_make_sound(true),
+#else
 		m_make_sound(false),
+#endif
 		m_sound_out(nullptr)
 {
 	m_extension_list[0] = '\0';

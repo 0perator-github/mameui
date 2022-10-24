@@ -109,7 +109,11 @@ const options_entry osd_options::s_option_entries[] =
 	{ OSDOPTION_SWITCHRES,                       "0",              core_options::option_type::BOOLEAN,   "enable resolution switching" },
 
 	{ nullptr,                                   nullptr,          core_options::option_type::HEADER,    "OSD ACCELERATED VIDEO OPTIONS" },
+#if defined(MAMEUI_WINAPP) // MAMEUI: MAME has this enabled.
+	{ OSDOPTION_FILTER ";glfilter;flt",          "0",              core_options::option_type::BOOLEAN,   "use bilinear filtering when scaling emulated video" },
+#else
 	{ OSDOPTION_FILTER ";glfilter;flt",          "1",              core_options::option_type::BOOLEAN,   "use bilinear filtering when scaling emulated video" },
+#endif
 	{ OSDOPTION_PRESCALE "(1-20)",               "1",              core_options::option_type::INTEGER,   "scale emulated video by this factor before applying filters/shaders" },
 
 #if USE_OPENGL
