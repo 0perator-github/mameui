@@ -33,6 +33,7 @@ jobs:
     - name: Build
       env:
         USE_LIBSDL: 1
+        TARGET: mame
         TOOLS: 1
       run: make -j2
     - name: Validate
