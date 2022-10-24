@@ -193,6 +193,37 @@ project ("osd_" .. _OPTIONS["osd"])
 		MAME_DIR .. "src/osd/modules/debugger/win/debugwin.h",
 	}
 
+	if _OPTIONS["USE_NEWUI"] == "1" then
+		includedirs {
+			MAME_DIR .. "src/frontend/mame",
+			MAME_DIR .. "src/mameui/lib/winapi",
+			MAME_DIR .. "src/mameui/winapp",
+			MAME_DIR .. "src/mameui/lib/util",
+		}
+
+		if not BUILD_UI_TARGET then
+			files {
+				MAME_DIR .. "src/mameui/lib/util/mui_cstr.cpp",
+				MAME_DIR .. "src/mameui/lib/util/mui_cstr.h",
+				MAME_DIR .. "src/mameui/lib/util/mui_wcstr.cpp",
+				MAME_DIR .. "src/mameui/lib/util/mui_wcstr.h",
+				MAME_DIR .. "src/mameui/lib/util/mui_wcstrconv.cpp",
+				MAME_DIR .. "src/mameui/lib/util/mui_wcstrconv.h",
+				MAME_DIR .. "src/mameui/lib/util/mui_stringtokenizer.cpp",
+				MAME_DIR .. "src/mameui/lib/util/mui_stringtokenizer.h",
+			}
+		end
+
+		files {
+			MAME_DIR .. "src/mameui/winapp/newui.cpp",
+			MAME_DIR .. "src/mameui/winapp/newui.h",
+		}
+	else
+		files {
+			MAME_DIR .. "src/osd/windows/winmenu.cpp",
+		}
+	end
+
 
 project ("ocore_" .. _OPTIONS["osd"])
 	uuid (os.uuid("ocore_" .. _OPTIONS["osd"]))

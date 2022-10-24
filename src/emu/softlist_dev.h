@@ -149,6 +149,9 @@ private:
 
 	// internal state
 	bool                        m_parsed;
+#if defined(MAMEUI_WINAPP) // MAMEUI: converted this filestream, normally found inside the parse method, to a class member.
+	std::unique_ptr<emu_file>   m_software_list_file;
+#endif
 	std::string                 m_filename;
 	std::string                 m_shortname;
 	std::string                 m_description;

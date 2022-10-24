@@ -36,8 +36,11 @@ const options_entry emu_options::s_option_entries[] =
 	// config options
 	{ nullptr,                                           nullptr,     core_options::option_type::HEADER,     "CORE CONFIGURATION OPTIONS" },
 	{ OPTION_READCONFIG ";rc",                           "1",         core_options::option_type::BOOLEAN,    "enable loading of configuration files" },
+#if defined(MAMEUI_WINAPP) // MAMEUI: Some more changes based on personal preference. MAME has this set to "0".
+	{ OPTION_WRITECONFIG ";wc",                          "1",         core_options::option_type::BOOLEAN,    "write configuration to (driver).ini on exit" },
+#else
 	{ OPTION_WRITECONFIG ";wc",                          "0",         core_options::option_type::BOOLEAN,    "write configuration to (driver).ini on exit" },
-
+#endif
 	// search path options
 	{ nullptr,                                           nullptr,     core_options::option_type::HEADER,     "CORE SEARCH PATH OPTIONS" },
 	{ OPTION_PLUGINDATAPATH,                             ".",         core_options::option_type::PATH,       "path to base folder for plugin data (read/write)" },
@@ -46,7 +49,11 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_SAMPLEPATH ";sp",                           "samples",   core_options::option_type::MULTIPATH,  "path to audio sample sets" },
 	{ OPTION_ARTPATH,                                    "artwork",   core_options::option_type::MULTIPATH,  "path to artwork files" },
 	{ OPTION_CTRLRPATH,                                  "ctrlr",     core_options::option_type::MULTIPATH,  "path to controller definitions" },
+#if defined(MAMEUI_WINAPP) // MAMEUI: Switched the default ini path back to 'ini\'.
+	{ OPTION_INIPATH,                                    "ini;ini/presets;.",     core_options::option_type::MULTIPATH,     "path to ini files" },
+#else
 	{ OPTION_INIPATH,                                    ".;ini;ini/presets",     core_options::option_type::MULTIPATH,     "path to ini files" },
+#endif
 	{ OPTION_FONTPATH,                                   ".",         core_options::option_type::MULTIPATH,  "path to font files" },
 	{ OPTION_CHEATPATH,                                  "cheat",     core_options::option_type::MULTIPATH,  "path to cheat files" },
 	{ OPTION_CROSSHAIRPATH,                              "crosshair", core_options::option_type::MULTIPATH,  "path to crosshair files" },
@@ -81,7 +88,11 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_SNAPNAME,                                   "%g/%i",     core_options::option_type::STRING,     "override of the default snapshot/movie naming; %g == gamename, %i == index" },
 	{ OPTION_SNAPSIZE,                                   "auto",      core_options::option_type::STRING,     "specify snapshot/movie resolution (<width>x<height>) or 'auto' to use minimal size " },
 	{ OPTION_SNAPVIEW,                                   "auto",      core_options::option_type::STRING,     "snapshot/movie view - 'auto' for default, or 'native' for per-screen pixel-aspect views" },
+#if defined(MAMEUI_WINAPP) // MAMEUI: MAME has this one set to "1".
+	{ OPTION_SNAPBILINEAR,                               "0",         core_options::option_type::BOOLEAN,    "specify if the snapshot/movie should have bilinear filtering applied" },
+#else
 	{ OPTION_SNAPBILINEAR,                               "1",         core_options::option_type::BOOLEAN,    "specify if the snapshot/movie should have bilinear filtering applied" },
+#endif
 	{ OPTION_STATENAME,                                  "%g",        core_options::option_type::STRING,     "override of the default state subfolder naming; %g == gamename" },
 	{ OPTION_BURNIN,                                     "0",         core_options::option_type::BOOLEAN,    "create burn-in snapshots for each screen" },
 
@@ -705,6 +716,20 @@ bool emu_options::add_and_remove_image_options()
 	for (auto &opt_name : existing)
 	{
 		auto iter = m_image_options_canonical.find(*opt_name);
+#if defined(MAMEUI_WINAPP) // MAMEUI: Not sure if this is a problem anymore. It was noted that
+						   // special handling for BML3 which includes a 1802 slot was needed,
+						   // otherwise the assertion would trigger.
+		if (iter != m_image_options_canonical.end())
+		{
+			// if this is represented in core_options, remove it
+			if (iter->second.option_entry())
+				remove_entry(*iter->second.option_entry());
+
+			// remove this option
+			m_image_options_canonical.erase(iter);
+			changed = true;
+		}
+#else
 		assert(iter != m_image_options_canonical.end());
 
 		// if this is represented in core_options, remove it
@@ -714,6 +739,7 @@ bool emu_options::add_and_remove_image_options()
 		// remove this option
 		m_image_options_canonical.erase(iter);
 		changed = true;
+#endif
 	}
 
 	return changed;

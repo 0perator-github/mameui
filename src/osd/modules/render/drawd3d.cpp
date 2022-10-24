@@ -1111,39 +1111,65 @@ bool renderer_d3d9::device_verify_caps()
 	// verify device capabilities
 	if (!(caps.DevCaps & D3DDEVCAPS_CANRENDERAFTERFLIP))
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: 0perator, "Dev before me switched these error messages to verbose."
+        osd_printf_verbose("Direct3D Error: Your graphics card does not support rendering after a page\n");
+        osd_printf_verbose("flip.\n");
+#else
 		osd_printf_error("Direct3D Error: Your graphics card does not support rendering after a page\n");
 		osd_printf_error("flip.\n");
+#endif
 		success = false;
 	}
 
 	if (!(caps.DevCaps & D3DDEVCAPS_HWRASTERIZATION))
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: More error messages switched to verbose.
+        osd_printf_verbose("Direct3D Error: Your graphics card does not support hardware rendering.\n");
+#else
 		osd_printf_error("Direct3D Error: Your graphics card does not support hardware rendering.\n");
+#endif
 		success = false;
 	}
 
 	// verify texture operation capabilities
 	if (!(caps.TextureOpCaps & D3DTEXOPCAPS_MODULATE))
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: More error messages switched to verbose.
+        osd_printf_verbose("Direct3D Error: Your graphics card does not support modulate-type blending.\n");
+#else
 		osd_printf_error("Direct3D Error: Your graphics card does not support modulate-type blending.\n");
+#endif
 		success = false;
 	}
 
 	if (caps.TextureCaps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL)
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: More error messages switched to verbose.
+        osd_printf_verbose("Direct3D Error: Your graphics card does not fully support non-power-of-two\n");
+        osd_printf_verbose("textures.\n");
+#else
 		osd_printf_error("Direct3D Error: Your graphics card does not fully support non-power-of-two\n");
 		osd_printf_error("textures.\n");
+#endif
 		success = false;
 	}
 
 	if (caps.TextureCaps & D3DPTEXTURECAPS_POW2)
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: More error messages switched to verbose.
+        osd_printf_verbose("Direct3D Error: Your graphics card does not support non-power-of-two textures.\n");
+#else
 		osd_printf_error("Direct3D Error: Your graphics card does not support non-power-of-two textures.\n");
+#endif
 		success = false;
 	}
 	if (caps.TextureCaps & D3DPTEXTURECAPS_SQUAREONLY)
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: More error messages switched to verbose.
+        osd_printf_verbose("Direct3D Error: Your graphics card does not support non-square textures.\n");
+#else
 		osd_printf_error("Direct3D Error: Your graphics card does not support non-square textures.\n");
+#endif
 		success = false;
 	}
 
@@ -1151,16 +1177,26 @@ bool renderer_d3d9::device_verify_caps()
 	result = m_d3dobj->CheckDeviceFormat(m_adapter, D3DDEVTYPE_HAL, m_pixformat, 0, D3DRTYPE_TEXTURE, D3DFMT_A8R8G8B8);
 	if (FAILED(result))
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: More error messages switched to verbose.
+        osd_printf_verbose("Direct3D Error: Your graphics card does not support the A8R8G8B8 texture format.\n");
+#else
 		osd_printf_error("Direct3D Error: Your graphics card does not support the A8R8G8B8 texture format.\n");
+#endif
 		success = false;
 	}
 
 	if (!success)
 	{
+#if defined(MAMEUI_WINAPP) // MAMEUI: More error messages switched to verbose.
+        osd_printf_verbose("This feature or features are required to use the Direct3D renderer. Please\n");
+        osd_printf_verbose("select another renderer using the -video option or contact the MAME developers\n");
+        osd_printf_verbose("with information about your system.\n");
+#else
 		osd_printf_error("This feature or features are required to use the Direct3D renderer. Please\n");
 		osd_printf_error("select another renderer using the -video option or contact the MAME developers\n");
 		osd_printf_error("with information about your system.\n");
 		return false;
+#endif
 	}
 
 	m_gamma_supported = ((caps.Caps2 & D3DCAPS2_FULLSCREENGAMMA) != 0);

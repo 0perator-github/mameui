@@ -35,6 +35,7 @@
 # NO_USE_PORTAUDIO = 1
 # NO_USE_PULSEAUDIO = 1
 # NO_USE_PIPEWIRE = 1
+# USE_NEWUI = 1
 # USE_TAPTUN = 1
 # USE_PCAP = 1
 # USE_QTDEBUG = 1
@@ -274,11 +275,11 @@ TARGET := $(PROJECT)
 endif
 
 ifndef TARGET
-TARGET := mame
+TARGET := mameui
 endif
 
 ifndef SUBTARGET
-SUBTARGET := $(TARGET)
+SUBTARGET := $(patsubst %ui,%,$(TARGET))
 endif
 
 SUBTARGET_FULL := $(subst -,_,$(SUBTARGET))
@@ -440,6 +441,12 @@ LD := $(SILENT)g++
 CXX:= $(SILENT)g++
 endif
 
+ifneq (,$(findstring ui,$(TARGET)))
+ifneq ($(TARGETOS),windows)
+$(error TARGETOS $(TARGETOS) unsupported. SUBTARGET $(SUBTARGET_FULL) only supports the Windows platform)
+endif
+endif
+
 #-------------------------------------------------
 # specify OSD layer: windows, sdl, etc.
 # build scripts will be run from
@@ -593,6 +600,10 @@ endif
 endif
 endif
 
+ifndef USE_NEWUI
+USE_NEWUI = 1
+endif
+
 ifdef TOOLS
 ifneq '$(TOOLS)' '0'
 PARAMS += --with-tools
@@ -705,6 +716,10 @@ endif
 
 ifdef TARGETOS
 TARGET_PARAMS += --targetos='$(TARGETOS)'
+endif
+
+ifdef USE_NEWUI
+PARAMS += --USE_NEWUI='$(USE_NEWUI)'
 endif
 
 ifdef USE_TAPTUN
@@ -896,23 +911,27 @@ SCRIPTS = scripts/genie.lua \
 	scripts/toolchain.lua \
 	scripts/src/osd/modules.lua \
 	$(wildcard src/osd/$(OSD)/$(OSD).mak) \
-	$(wildcard src/$(TARGET)/$(SUBTARGET_FULL).mak)
+	$(wildcard src/$(patsubst %ui,%,$(TARGET))/$(SUBTARGET_FULL).mak)
 
 ifdef SOURCEFILTER
 SCRIPTS += $(SOURCEFILTER)
 else
 ifndef SOURCES
 ifdef PROJECT
-SCRIPTS += projects/$(PROJECT)/scripts/target/$(TARGET)/$(SUBTARGET_FULL).lua
+SCRIPTS += projects/$(PROJECT)/scripts/target/$(patsubst %ui,%,$(TARGET))/$(SUBTARGET_FULL).lua
 else
 # A filter file can be used as an alternative
-#SCRIPTS += scripts/target/$(TARGET)/$(SUBTARGET_FULL).lua
+#SCRIPTS += scripts/target/$(patsubst %ui,%,$(TARGET))/$(SUBTARGET_FULL).lua
 endif
 endif
 endif
 
+ifneq (,$(findstring ui,$(TARGET)))
+SCRIPTS += $(wildcard scripts/src/winui/winapp*.lua)
+endif
+
 ifdef REGENIE
-SCRIPTS+= regenie
+SCRIPTS += regenie
 endif
 
 #-------------------------------------------------
@@ -1044,7 +1063,7 @@ endif
 
 GENIE := 3rdparty/genie/bin/$(GENIEOS)/genie$(EXE)
 
-ifeq ($(TARGET),$(SUBTARGET_FULL))
+ifeq ($(patsubst %ui,%,$(TARGET)),$(SUBTARGET_FULL))
 FULLTARGET := $(TARGET)
 else
 FULLTARGET := $(TARGET)$(SUBTARGET_FULL)
@@ -1492,17 +1511,17 @@ clean: genieclean
 	-$(SILENT)rm -rf $(BUILDDIR)
 	-$(SILENT)rm -rf 3rdparty/bgfx/.build
 
-GEN_FOLDERS := $(GENDIR)/$(TARGET)/layout/ $(GENDIR)/$(TARGET)/$(SUBTARGET_FULL)/ $(GENDIR)/mame/drivers/ $(GENDIR)/mame/machine/
+GEN_FOLDERS := $(GENDIR)/$(patsubst %ui,%,$(TARGET))/layout/ $(GENDIR)/$(patsubst %ui,%,$(TARGET))/$(SUBTARGET_FULL)/ $(GENDIR)/mame/drivers/ $(GENDIR)/mame/machine/
 
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
-LAYOUTS=$(wildcard $(SRC)/$(TARGET)/layout/*.lay)
+LAYOUTS=$(wildcard $(SRC)/$(patsubst %ui,%,$(TARGET))/layout/*.lay)
 
 ifneq (,$(wildcard src/osd/$(OSD)/$(OSD).mak))
 include src/osd/$(OSD)/$(OSD).mak
 endif
 
-ifneq (,$(wildcard src/$(TARGET)/$(TARGET).mak))
-include src/$(TARGET)/$(TARGET).mak
+ifneq (,$(wildcard src/$(patsubst %ui,%,$(TARGET))/$(patsubst %ui,%,$(TARGET)).mak))
+include src/$(patsubst %ui,%,$(TARGET))/$(patsubst %ui,%,$(TARGET)).mak
 endif
 
 $(GEN_FOLDERS):
