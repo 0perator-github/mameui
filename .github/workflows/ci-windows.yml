@@ -34,7 +34,7 @@ jobs:
             cc: gcc
             cxx: g++
             subtarget: mame
-            executable: mame
+            executable: mameui
           - compiler: clang-x64
             os: windows-latest
             msys: MINGW64
@@ -42,7 +42,7 @@ jobs:
             cc: clang
             cxx: clang++
             subtarget: tiny
-            executable: mametiny
+            executable: mameuitiny
           - compiler: clang-arm64
             os: windows-11-arm
             msys: CLANGARM64
@@ -50,8 +50,8 @@ jobs:
             extrapkg: mingw-w64-clang-aarch64-gcc-compat
             cc: clang
             cxx: clang++
-            subtarget: mame
-            executable: mame
+            subtarget: tiny
+            executable: mameuitiny
     runs-on: ${{ matrix.os }}
     defaults:
       run:
