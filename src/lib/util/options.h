@@ -204,6 +204,9 @@ public:
 	// parsing/input
 	void parse_command_line(const std::vector<std::string> &args, int priority, bool ignore_unknown_options = false);
 	void parse_ini_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override);
+#if defined(MAMEUI_WINAPP) // MAMEUI: add declaration for parse_parent_file there's another defined in frontend/mame/mameopts.cpp
+	void parse_parent_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override);
+#endif
 	void copy_from(const core_options &that);
 
 	// output
