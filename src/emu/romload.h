@@ -420,7 +420,11 @@ public:
 	std::string& software_load_warnings_message() { return m_softwarningstring; }
 
 	/* return the number of BAD_DUMP/NO_DUMP warnings we generated */
+#if defined(MAMEUI_WINAPP) // MAMEUI: I don't get this one never a bad dump? Need to look at this again...
+	int knownbad() const { return 0; }
+#else
 	int knownbad() const { return m_knownbad; }
+#endif
 
 	/* ----- disk handling ----- */
 

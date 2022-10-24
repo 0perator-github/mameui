@@ -31,6 +31,9 @@ enum
 	OPTION_PRIORITY_MAME_INI = OPTION_PRIORITY_NORMAL + 1,
 	OPTION_PRIORITY_DEBUG_INI,
 	OPTION_PRIORITY_ORIENTATION_INI,
+#if defined(MAMEUI_WINAPP) // MAMEUI: commit 0562745 removed system type flags.
+	OPTION_PRIORITY_SYSTEMTYPE_INI,
+#endif
 	OPTION_PRIORITY_SCREEN_INI,
 	OPTION_PRIORITY_SOURCE_INI,
 	OPTION_PRIORITY_GPARENT_INI,
@@ -58,6 +61,9 @@ public:
 private:
 	// INI parsing helper
 	static void parse_one_ini(emu_options &options, const char *basename, int priority, std::ostream *error_stream = nullptr);
+#if defined(MAMEUI_WINAPP) // MAMEUI: Added method to handle parsing of parent ini files.
+	static void parse_parent_ini(emu_options &options, const char *basename, int priority, std::ostream *error_stream = nullptr);
+#endif
 };
 
 #endif  // MAME_FRONTEND_MAMEOPTS_H

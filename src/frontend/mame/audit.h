@@ -159,6 +159,9 @@ public:
 	summary audit_software(software_list_device &swlist, const software_info &swinfo, const char *validation = AUDIT_VALIDATE_FULL);
 	summary audit_samples();
 	summary summarize(const char *name, std::ostream *output = nullptr) const;
+#if defined(MAMEUI_WINAPP) // MAMEUI: add our own summarize method, which only reports problems that can be fixed by the user.
+	summary winui_summarize(const char *name, std::ostream *output = nullptr) const;
+#endif
 
 private:
 	// internal helpers
