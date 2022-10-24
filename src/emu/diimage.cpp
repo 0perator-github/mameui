@@ -753,10 +753,14 @@ std::error_condition device_image_interface::load_software(software_list_device 
 				if (!swinfo)
 					return image_error::NOSOFTWARE;
 
+				// MAMEUI: MAME uses 'osd_printf_error' instead of 'osd_printf_warning'.
+				// This seems to have been a fitting alteration.
 				if (swinfo->supported() == software_support::PARTIALLY_SUPPORTED)
-					osd_printf_error("WARNING: support for software %s (in list %s) is only partial\n", swname, swlist.list_name());
+//                  osd_printf_error("WARNING: support for software %s (in list %s) is only partial\n", swname, swlist.list_name());
+					osd_printf_warning("WARNING: support for software %s (in list %s) is only partial\n", swname, swlist.list_name());
 				else if (swinfo->supported() == software_support::UNSUPPORTED)
-					osd_printf_error("WARNING: support for software %s (in list %s) is only preliminary\n", swname, swlist.list_name());
+//                  osd_printf_error("WARNING: support for software %s (in list %s) is only preliminary\n", swname, swlist.list_name());
+					osd_printf_warning("WARNING: support for software %s (in list %s) is only preliminary\n", swname, swlist.list_name());
 
 				u32 crc = 0;
 				const bool has_crc = util::hash_collection(romp->hashdata()).crc(crc);
@@ -813,7 +817,8 @@ std::error_condition device_image_interface::load_software(software_list_device 
 	}
 
 	if (warningcount > 0)
-		osd_printf_error("WARNING: the software item might not run correctly.\n");
+//      osd_printf_error("WARNING: the software item might not run correctly.\n");      // MAMEUI: Same change as above with 'osd_printf_warning'.
+		osd_printf_warning("WARNING: the software item might not run correctly.\n");    // replacing 'osd_printf_error'
 
 	return retval;
 }

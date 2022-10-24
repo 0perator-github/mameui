@@ -35,11 +35,13 @@ jobs:
             cc: gcc
             cxx: g++
             archopts: -U_FORTIFY_SOURCE
+            target: mame
             subtarget: tiny
             executable: mametiny
           - compiler: clang
             cc: clang
             cxx: clang++
+            target: mame
             subtarget: mame
             executable: mame
     steps:
@@ -56,6 +58,7 @@ jobs:
         OVERRIDE_CC: ${{ matrix.cc }}
         OVERRIDE_CXX: ${{ matrix.cxx }}
         ARCHOPTS: ${{ matrix.archopts }}
+        TARGET: ${{ matrix.target }}
         SUBTARGET: ${{ matrix.subtarget }}
         TOOLS: 1
       run: make -j2

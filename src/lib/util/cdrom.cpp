@@ -2395,9 +2395,14 @@ std::error_condition cdrom_file::parse_cue(std::string_view tocfname, toc &outto
 				}
 				else
 				{
-					fclose(infile);
-					printf("ERROR: Unhandled track type %s\n", token);
-					return chd_file::error::UNSUPPORTED_FORMAT;
+//                  fclose(infile);
+//                  printf("ERROR: Unhandled track type %s\n", token);
+//                  return chd_file::error::UNSUPPORTED_FORMAT;
+
+					// MAMEUI: Not sure if I agree with this one, but ok. You know, if the storage medium
+					// and its contents is supposed to be preserved. What's the purpose of forcing a read?
+					printf("ERROR: Track %02d: Unhandled track type %s\n", trknum+2,token);
+					goto nextpart;
 				}
 			}
 			else if (!strcmp(token, "TRACK"))
@@ -2550,7 +2555,7 @@ std::error_condition cdrom_file::parse_cue(std::string_view tocfname, toc &outto
 			}
 		}
 	}
-
+	nextpart: printf("TOTAL TRACKS = %d\n",trknum+1);  // MAMEUI: Jump here to force reading of the next track.
 	/* close the input CUE */
 	fclose(infile);
 
