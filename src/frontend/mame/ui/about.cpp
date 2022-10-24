@@ -48,7 +48,8 @@ menu_about::menu_about(mame_ui_manager &mui, render_container &container)
 					(sizeof(int) == sizeof(void *)) ? "I" : "",
 					(sizeof(long) == sizeof(void *)) ? "L" : (sizeof(long long) == sizeof(void *)) ? "LL" : "",
 					sizeof(void *) * 8),
-			util::string_format(_("about-header", "Revision: %1$s"), bare_vcs_revision) }
+//          util::string_format(_("about-header", "Revision: %1$s"), bare_vcs_revision) }   // MAMEUI: another one to evalute...
+			util::string_format(_("about-header", "Date: %1$s"), " " __DATE__) }            // Replaced about header here.
 {
 	set_process_flags(PROCESS_CUSTOM_NAV);
 }

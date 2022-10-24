@@ -90,8 +90,9 @@ software_list_device::software_list_device(const machine_config &mconfig, const 
 	m_list_type(softlist_type::ORIGINAL_SYSTEM),
 	m_filter(nullptr),
 	m_parsed(false),
-	m_description("")
-{
+	m_software_list_file(new emu_file(mconfig.options().hash_path(), OPEN_FLAG_READ)),  // MAMEUI: converted this filestream, normally found inside the parse
+	m_description("")                                                                   // method, to a class member to speed up the game picker's scroll
+{                                                                                       // bar and prevent a crash that occurs while scrolling real fast.
 }
 
 
@@ -178,6 +179,7 @@ void software_list_device::release()
 {
 	osd_printf_verbose("%s: Resetting %s\n", tag(), m_list_name);
 	m_parsed = false;
+	m_software_list_file.reset();
 	m_filename.clear();
 	m_shortname.clear();
 	m_description.clear();
@@ -288,15 +290,18 @@ void software_list_device::parse()
 	m_errors.clear();
 
 	// attempt to open the file
-	emu_file file(mconfig().options().hash_path(), OPEN_FLAG_READ);
-	const std::error_condition filerr = file.open(m_list_name + ".xml");
-	m_filename = file.filename();
+//  emu_file file(mconfig().options().hash_path(), OPEN_FLAG_READ);
+//  const std::error_condition filerr = file.open(m_list_name + ".xml");
+	const std::error_condition filerr = m_software_list_file->open(m_list_name + ".xml");
+	m_filename = m_software_list_file->filename();
 	if (!filerr)
 	{
 		// parse if no error
 		std::ostringstream errs;
-		parse_software_list(file, m_filename, m_shortname, m_description, m_infolist, errs);
-		file.close();
+//      parse_software_list(file, m_filename, m_shortname, m_description, m_infolist, errs);
+//      file.close();
+		parse_software_list(*m_software_list_file, m_filename, m_shortname, m_description, m_infolist, errs);
+		m_software_list_file->close();
 		m_errors = errs.str();
 	}
 	else if (std::errc::no_such_file_or_directory == filerr)

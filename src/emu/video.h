@@ -55,6 +55,7 @@ public:
 	bool fastforward() const { return m_fastforward; }
 
 	// setters
+	void set_speed_factor(int speed) { m_speed = speed; } // MAMEUI: Set the emulation speed.
 	void set_frameskip(int frameskip);
 	void set_throttled(bool throttled) { m_throttled = throttled; }
 	void set_throttle_rate(float throttle_rate) { m_throttle_rate = throttle_rate; }
