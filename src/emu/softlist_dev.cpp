@@ -92,6 +92,11 @@ software_list_device::software_list_device(const machine_config &mconfig, const 
 	m_parsed(false),
 	m_description("")
 {
+#if defined(MAMEUI_WINAPP) // MAMEUI: converted this filestream, normally found inside the parse
+						   // method, to a class member to speed up the game picker's scroll
+						   // bar and prevent a crash that occurs while scrolling real fast.
+	m_software_list_file = std::make_unique<emu_file>(mconfig.options().hash_path(), OPEN_FLAG_READ);
+#endif
 }
 
 
@@ -183,6 +188,9 @@ void software_list_device::release()
 	m_description.clear();
 	m_errors.clear();
 	m_infolist.clear();
+#if defined(MAMEUI_WINAPP) // MAMEUI: reset the filestream to prevent a crash that occurs while scrolling real fast.
+	m_software_list_file.reset();
+#endif
 }
 
 
@@ -288,15 +296,25 @@ void software_list_device::parse()
 	m_errors.clear();
 
 	// attempt to open the file
+#if defined(MAMEUI_WINAPP) // MAMEUI: converted this filestream, normally found inside the parse method, to a class member.
+	const std::error_condition filerr = m_software_list_file->open(m_list_name + ".xml");
+	m_filename = m_software_list_file->filename();
+#else
 	emu_file file(mconfig().options().hash_path(), OPEN_FLAG_READ);
 	const std::error_condition filerr = file.open(m_list_name + ".xml");
 	m_filename = file.filename();
+#endif
 	if (!filerr)
 	{
 		// parse if no error
 		std::ostringstream errs;
+#if defined(MAMEUI_WINAPP) // MAMEUI: converted this filestream, normally found inside the parse method, to a class member.
+		parse_software_list(*m_software_list_file, m_filename, m_shortname, m_description, m_infolist, errs);
+		m_software_list_file->close();
+#else
 		parse_software_list(file, m_filename, m_shortname, m_description, m_infolist, errs);
 		file.close();
+#endif
 		m_errors = errs.str();
 	}
 	else if (std::errc::no_such_file_or_directory == filerr)

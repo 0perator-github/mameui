@@ -18,6 +18,13 @@
 #include <chrono>
 #include <vector>
 
+#if defined(MAMEUI_WINAPP) // MAMEUI: Using our own entry point just in case.
+//============================================================
+//  FUNCTION PROTOTYPES
+//============================================================
+
+int mame_main(int argc, char* argv[]);
+#endif
 
 //============================================================
 //  TYPE DEFINITIONS
