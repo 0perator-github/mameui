@@ -22,6 +22,9 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <sstream>
+#if defined(MAMEUI_WINAPP) // MAMEUI: iostream is required for console output. In validate(), output error to the console instead of throwing an exception.
+#include <iostream>
+#endif
 
 
 const int core_options::MAX_UNADORNED_OPTIONS;
@@ -422,7 +425,11 @@ void core_options::entry::validate(const std::string &data)
 	case option_type::HEADER:
 	default:
 		// anything else is invalid
+#if defined(MAMEUI_WINAPP) // MAMEUI: Changed from exception to no-op; now prints a message to the console instead of just breaking out.
+		std::cout << "Attempted to set invalid option " << name() << std::endl;
+#else
 		throw options_error_exception("Attempted to set invalid option %s\n", name());
+#endif
 	}
 }
 
@@ -1394,3 +1401,92 @@ void core_options::simple_entry::revert(int priority_hi, int priority_lo)
 		set_priority(OPTION_PRIORITY_DEFAULT);
 	}
 }
+#if defined(MAMEUI_WINAPP) // MAMEUI: Added so slots and images are not copied to the clone.
+
+//-------------------------------------------------
+//  parse_parent_file - practically the same as
+//  'parse_ini_file' except that it ignores lines
+//  that contain the words "SLOT" and "IMAGE" so
+//  slots and images are not copied to the clone
+//-------------------------------------------------
+
+void core_options::parse_parent_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override)
+{
+	std::ostringstream error_stream;
+	condition_type condition = condition_type::NONE;
+
+	// loop over lines in the file
+	char buffer[4096];
+	while (inifile.gets(buffer, std::size(buffer)) != nullptr)
+	{
+		// find the extent of the name
+		char *optionname;
+		for (optionname = buffer; *optionname != 0; optionname++)
+			if (!isspace((uint8_t)*optionname))
+				break;
+
+		// MAMEUI: I cleaned up the flow a bit here. First, check for and skip empty lines.
+		// Then see if the comment starts with "SLOT" or "IMAGE". If it does, break out,
+		// otherwise continue reading the file.
+		if (*optionname == 0) // skip empty lines
+			continue;
+
+		if (*optionname == '#')
+		{
+			if (optionname[2] == 'S' && optionname[3] == 'L' && optionname[4] == 'O' && optionname[5] == 'T' )
+				break;
+			else if (optionname[2] == 'I' && optionname[3] == 'M' && optionname[4] == 'A' && optionname[5] == 'G'  && optionname[5] == 'E' )
+				break;
+			else // skip comments
+				continue;
+		}
+
+		// scan forward to find the first space
+		char *temp;
+		for (temp = optionname; *temp != 0; temp++)
+			if (isspace((uint8_t)*temp))
+				break;
+
+		// if we hit the end early, print a warning and continue
+		if (*temp == 0)
+		{
+			condition = std::max(condition, condition_type::WARN);
+			util::stream_format(error_stream, "Warning: invalid line in INI: %s", buffer);
+			continue;
+		}
+
+		// NULL-terminate
+		*temp++ = 0;
+		char *optiondata = temp;
+
+		// scan the data, stopping when we hit a comment
+		bool inquotes = false;
+		for (temp = optiondata; *temp != 0; temp++)
+		{
+			if (*temp == '"')
+				inquotes = !inquotes;
+			if (*temp == '#' && !inquotes)
+				break;
+		}
+		*temp = 0;
+
+		// find our entry
+		entry::shared_ptr curentry = get_entry(optionname);
+		if (!curentry)
+		{
+			if (!ignore_unknown_options)
+			{
+				condition = std::max(condition, condition_type::WARN);
+				util::stream_format(error_stream, "Warning: unknown option in INI: %s\n", optionname);
+			}
+			continue;
+		}
+
+		// set the new data
+		do_set_value(*curentry, trim_spaces_and_quotes(optiondata), priority, error_stream, condition, true);
+	}
+
+	// did we have any errors that may need to be aggregated?
+	throw_options_exception_if_appropriate(condition, error_stream);
+}
+#endif
