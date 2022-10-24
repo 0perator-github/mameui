@@ -12,7 +12,9 @@
 
 #include "config.h"
 #include "emuopts.h"
+#if !defined(MAMEUI_WINAPP) // MAMEUI: Move the include to the heaader file.
 #include "fileio.h"
+#endif
 #include "inputdev.h"
 #include "main.h"
 #include "natkeyboard.h"
@@ -23,7 +25,9 @@
 #include "util/corestr.h"
 #include "util/ioprocsfilter.h"
 #include "util/language.h"
+#if !defined(MAMEUI_WINAPP) // MAMEUI: Move the include to the heaader file.
 #include "util/multibyte.h"
+#endif
 #include "util/unicode.h"
 #include "util/xmlfile.h"
 
@@ -298,7 +302,7 @@ std::string substitute_player(std::string_view name, u8 player)
 	}
 	return result;
 }
-
+#if !defined(MAMEUI_WINAPP) // MAMEUI: move the class to the header
 
 
 // ======================> inp_header
@@ -394,7 +398,7 @@ private:
 
 	u8                              m_data[OFFS_END];
 };
-
+#endif
 } // anonymous namespace
 
 
