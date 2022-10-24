@@ -129,6 +129,12 @@ options_entry const f_win_option_entries[] =
 	// input options
 	{ nullptr,                                        nullptr,    core_options::option_type::HEADER,     "INPUT DEVICE OPTIONS" },
 	{ WINOPTION_DUAL_LIGHTGUN ";dual",                "0",        core_options::option_type::BOOLEAN,    "enable dual lightgun input" },
+#if defined(MAMEUI_NEWUI) // MAMEUI: Add a new option for showing and hiding the NewUI menubar
+
+	// newui options
+	{ nullptr,                                        nullptr,    core_options::option_type::HEADER,     "NEWUI OPTIONS" },
+	{ WINOPTION_SHOW_MENUBAR,                         "1",        core_options::option_type::BOOLEAN,    "Show the NewUI menu bar" },
+#endif
 
 	{ nullptr }
 };

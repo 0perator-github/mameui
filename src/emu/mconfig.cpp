@@ -99,7 +99,11 @@ machine_config::machine_config(const game_driver &gamedrv, emu_options &options)
 					new_dev->set_input_default(input_device_defaults);
 			}
 			else
+#if defined(MAMEUI_WINAPP) // MAMEUI: Is this necessary? Exceptions are thrown for a reason...
+				osd_printf_warning("Unknown slot option '%s' in slot '%s'\n", selval, owner.tag()+1);
+#else
 				throw emu_fatalerror("Unknown slot option '%s' in slot '%s'", selval, owner.tag()+1);
+#endif
 		}
 	}
 
