@@ -1,5 +1,5 @@
 -- license:BSD-3-Clause
--- copyright-holders:MAMEdev Team
+-- copyright-holders:MAMEdev Team, 0perator
 STANDALONE = false
 
 -- Big project specific
@@ -422,6 +422,15 @@ newoption {
 	description = "Select projects to be built. Will look into project folder for files.",
 }
 
+newoption {
+	trigger = "USE_NEWUI",
+	description = "NewUI Menubar",
+	allowed = {
+		{ "0",   "Disabled"      },
+		{ "1",   "Enabled"     },
+	}
+}
+
 dofile ("extlib.lua")
 
 if _OPTIONS["SHLIB"]=="1" then
@@ -453,12 +462,17 @@ GEN_DIR = MAME_BUILD_DIR .. "generated/"
 if (_OPTIONS["target"] == nil) then return false end
 if (_OPTIONS["subtarget"] == nil) then return false end
 
-if (_OPTIONS["target"] == _OPTIONS["subtarget"]) then
-	solution (_OPTIONS["target"])
-else
-	solution (_OPTIONS["target"] .. _OPTIONS["subtarget"])
+-- MAMEUI: Technically we're just building mame, but with a few additions. So for now I'm
+-- just masking the target. Laying out a hole new target just isn't worth it in my eyes.
+BUILD_UI_TARGET = iif (string.find(_OPTIONS["target"], "ui") ~= nil, true, false)
+PSEUDO_TARGET = iif (BUILD_UI_TARGET,string.gsub(_OPTIONS["target"], "ui", ""), _OPTIONS["target"])
+
+local soluname = _OPTIONS["target"] .. _OPTIONS["subtarget"]
+if (PSEUDO_TARGET == _OPTIONS["subtarget"]) then
+	soluname = _OPTIONS["target"]
 end
 
+solution (soluname)
 
 configurations {
 	"Debug",
@@ -522,18 +536,18 @@ messageskip { "SkipCreatingMessage", "SkipBuildingMessage", "SkipCleaningMessage
 if _OPTIONS["with-emulator"] then
 	if (_OPTIONS["PROJECT"] ~= nil) then
 		PROJECT_DIR = path.join(path.getabsolute(".."),"projects",_OPTIONS["PROJECT"]) .. "/"
-		if (not os.isfile(path.join("..", "projects", _OPTIONS["PROJECT"], "scripts", "target", _OPTIONS["target"],_OPTIONS["subtarget"] .. ".lua"))) then
-			error("File definition for TARGET=" .. _OPTIONS["target"] .. " SUBTARGET=" .. _OPTIONS["subtarget"] .. " does not exist")
+		if (not os.isfile(path.join("..", "projects", _OPTIONS["PROJECT"], "scripts", "target", PSEUDO_TARGET,_OPTIONS["subtarget"] .. ".lua"))) then
+			error("File definition for TARGET=" .. PSEUDO_TARGET .. " SUBTARGET=" .. _OPTIONS["subtarget"] .. " does not exist")
 		end
-		dofile (path.join(".." ,"projects", _OPTIONS["PROJECT"], "scripts", "target", _OPTIONS["target"],_OPTIONS["subtarget"] .. ".lua"))
+		dofile (path.join(".." ,"projects", _OPTIONS["PROJECT"], "scripts", "target", PSEUDO_TARGET,_OPTIONS["subtarget"] .. ".lua"))
 	elseif (_OPTIONS["SOURCES"] == nil) and (_OPTIONS["SOURCEFILTER"] == nil) then
-		local subtargetscript = path.join("target", _OPTIONS["target"], _OPTIONS["subtarget"] .. ".lua")
-		local subtargetfilter = path.join(MAME_DIR, "src", _OPTIONS["target"], _OPTIONS["subtarget"] .. ".flt")
+		local subtargetscript = path.join("target", PSEUDO_TARGET, _OPTIONS["subtarget"] .. ".lua")
+		local subtargetfilter = path.join(MAME_DIR, "src", PSEUDO_TARGET, _OPTIONS["subtarget"] .. ".flt")
 		if os.isfile(subtargetscript) then
 			dofile(subtargetscript)
 		elseif os.isfile(subtargetfilter) then
 			local makedep = path.join(MAME_DIR, "scripts", "build", "makedep.py")
-			local driverlist = path.join(MAME_DIR, "src", _OPTIONS["target"], _OPTIONS["target"] .. ".lst")
+			local driverlist = path.join(MAME_DIR, "src", PSEUDO_TARGET, PSEUDO_TARGET .. ".lst")
 			local OUT_STR = os.outputof(
 				string.format(
 					"%s %s -r %s filterproject -t %s -f %s %s",
@@ -543,7 +557,7 @@ if _OPTIONS["with-emulator"] then
 			end
 			load(OUT_STR)()
 		else
-			error("Definition file for TARGET=" .. _OPTIONS["target"] .. " SUBTARGET=" .. _OPTIONS["subtarget"] .. " does not exist")
+			error("Definition file for TARGET=" .. PSEUDO_TARGET .. " SUBTARGET=" .. _OPTIONS["subtarget"] .. " does not exist")
 		end
 	end
 end
@@ -929,13 +943,13 @@ if _OPTIONS["LDOPTS"] then
 end
 
 if _OPTIONS["MAP"] then
-	if (_OPTIONS["target"] == _OPTIONS["subtarget"]) then
+	if (PSEUDO_TARGET == _OPTIONS["subtarget"]) then
 		linkoptions {
-			"-Wl,-Map," .. "../../../../" .. _OPTIONS["target"] .. ".map"
+			"-Wl,-Map," .. "../../../../" .. PSEUDO_TARGET .. ".map"
 		}
 	else
 		linkoptions {
-			"-Wl,-Map," .. "../../../../"  .. _OPTIONS["target"] .. _OPTIONS["subtarget"] .. ".map"
+			"-Wl,-Map," .. "../../../../"  .. PSEUDO_TARGET .. _OPTIONS["subtarget"] .. ".map"
 		}
 
 	end
@@ -1091,7 +1105,7 @@ if (_OPTIONS["PLATFORM"]=="arm64") then
 end
 
 local subdir
-if (_OPTIONS["target"] == _OPTIONS["subtarget"]) then
+if (PSEUDO_TARGET == _OPTIONS["subtarget"]) then
 	subdir = _OPTIONS["osd"] .. "/" .. _OPTIONS["target"]
 else
 	subdir = _OPTIONS["osd"] .. "/" .. _OPTIONS["target"] .. _OPTIONS["subtarget"]
@@ -1237,7 +1251,6 @@ configuration { "vs20*" }
 			"_CRT_SECURE_NO_DEPRECATE",
 			"_CRT_STDIO_LEGACY_WIDE_SPECIFIERS",
 		}
-
 		links {
 			"user32",
 			"winmm",
@@ -1379,18 +1392,24 @@ if _OPTIONS["SOURCES"] ~= nil then
 	local str = _OPTIONS["SOURCES"]
 	local sourceargs = ""
 	for word in string.gmatch(str, '([^,]+)') do
-		local fullpath = path.join(MAME_DIR, word)
-		if (not os.isfile(fullpath)) and (not os.isdir(fullpath)) then
-			word = path.join("src", _OPTIONS["target"], word)
-			fullpath = path.join(MAME_DIR, word)
-			if (not os.isfile(fullpath)) and (not os.isdir(fullpath)) then
-				error("File/directory " .. word .. " does not exist")
+		word = word:match("^%s*(.-)%s*$") -- trim
+
+		local candidate = word
+		local fullpath = path.join(MAME_DIR, candidate)
+
+		if not (os.isfile(fullpath) or os.isdir(fullpath)) then
+			candidate = path.join("src", PSEUDO_TARGET, word)
+			fullpath = path.join(MAME_DIR, candidate)
+
+			if not (os.isfile(fullpath) or os.isdir(fullpath)) then
+				error("File/directory " .. candidate .. " does not exist")
 			end
 		end
-		sourceargs = sourceargs .. " " .. word
+
+		sourceargs = sourceargs .. " " .. candidate
 	end
 
-	local driverlist = path.join(MAME_DIR, "src", _OPTIONS["target"], _OPTIONS["target"] .. ".lst")
+	local driverlist = path.join(MAME_DIR, "src", PSEUDO_TARGET, PSEUDO_TARGET .. ".lst")
 	local OUT_STR = os.outputof(
 		string.format(
 			"%s %s -r %s sourcesproject -t %s -l %s %s",
@@ -1400,8 +1419,8 @@ if _OPTIONS["SOURCES"] ~= nil then
 	end
 	load(OUT_STR)()
 
-	local driverlist = path.join(MAME_DIR, "src", _OPTIONS["target"], _OPTIONS["target"] .. ".lst")
-	local driverfilter = path.join(GEN_DIR, _OPTIONS["target"], _OPTIONS["subtarget"] .. ".flt")
+	local driverlist = path.join(MAME_DIR, "src", PSEUDO_TARGET, PSEUDO_TARGET .. ".lst")
+	local driverfilter = path.join(GEN_DIR, PSEUDO_TARGET, _OPTIONS["subtarget"] .. ".flt")
 	os.outputof(
 		string.format(
 			"%s %s -r %s sourcesfilter -l %s %s > %s",
@@ -1413,7 +1432,7 @@ elseif _OPTIONS["SOURCEFILTER"] ~= nil then
 	end
 
 	local makedep = path.join(MAME_DIR, "scripts", "build", "makedep.py")
-	local driverlist = path.join(MAME_DIR, "src", _OPTIONS["target"], _OPTIONS["target"] .. ".lst")
+	local driverlist = path.join(MAME_DIR, "src", PSEUDO_TARGET, PSEUDO_TARGET .. ".lst")
 	local OUT_STR = os.outputof(
 		string.format(
 			"%s %s -r %s filterproject -t %s -f %s %s",
@@ -1423,6 +1442,16 @@ elseif _OPTIONS["SOURCEFILTER"] ~= nil then
 	end
 	load(OUT_STR)()
 end
+if BUILD_UI_TARGET then
+	defines {
+		"MAMEUI_WINAPP", -- Enable the building of MAMEUI
+	}
+end
+if (_OPTIONS["USE_NEWUI"] == "1") then
+	defines {
+		"MAMEUI_NEWUI", -- Due to the MAME Team removing newui as a vestigial feature. I made it optional to compile it.
+	}
+end
 
 group "libs"
 
@@ -1430,26 +1459,28 @@ if (not os.isfile(path.join("src", "osd",  _OPTIONS["osd"] .. ".lua"))) then
 	error("Unsupported value '" .. _OPTIONS["osd"] .. "' for OSD")
 end
 dofile(path.join("src", "osd", _OPTIONS["osd"] .. ".lua"))
+if BUILD_UI_TARGET then -- MAMEUI: Build MAME with the windows UI
+	group "mameui"
+	dofile(path.join("src", "mameui", "winapp.lua"))
+end
 dofile(path.join("src", "lib.lua"))
 if opt_tool(MACHINES, "NETLIST") then
    dofile(path.join("src", "netlist.lua"))
 end
 --if (STANDALONE~=true) then
 dofile(path.join("src", "formats.lua"))
-formatsProject(_OPTIONS["target"],_OPTIONS["subtarget"])
+formatsProject(PSEUDO_TARGET,_OPTIONS["subtarget"])
 --end
 
 group "3rdparty"
 dofile(path.join("src", "3rdparty.lua"))
 
-
 group "core"
-
 dofile(path.join("src", "emu.lua"))
 
 group "devices"
 dofile(path.join("src", "devices.lua"))
-devicesProject(_OPTIONS["target"],_OPTIONS["subtarget"])
+devicesProject(PSEUDO_TARGET,_OPTIONS["subtarget"])
 
 if _OPTIONS["with-emulator"] then
 	if (STANDALONE~=true) then
@@ -1458,19 +1489,19 @@ if _OPTIONS["with-emulator"] then
 
 	if (STANDALONE~=true) then
 		group "drivers"
-		findfunction("createProjects_" .. _OPTIONS["target"] .. "_" .. _OPTIONS["subtarget"])(_OPTIONS["target"], _OPTIONS["subtarget"])
+		findfunction("createProjects_" .. PSEUDO_TARGET .. "_" .. _OPTIONS["subtarget"])(PSEUDO_TARGET, _OPTIONS["subtarget"])
 	end
 
 	group "emulator"
 	dofile(path.join("src", "main.lua"))
+	local projname = _OPTIONS["subtarget"]
 	if (_OPTIONS["SOURCES"] == nil) and (_OPTIONS["SOURCEFILTER"] == nil) then
-		if (_OPTIONS["target"] == _OPTIONS["subtarget"]) then
-			startproject (_OPTIONS["target"])
+		if (PSEUDO_TARGET == _OPTIONS["subtarget"]) then
+			projname = _OPTIONS["target"]
 		else
-			startproject (_OPTIONS["target"] .. _OPTIONS["subtarget"])
+			projname = _OPTIONS["target"] .. _OPTIONS["subtarget"]
 		end
-	else
-		startproject (_OPTIONS["subtarget"])
+		startproject (projname)
 	end
 	mainProject(_OPTIONS["target"],_OPTIONS["subtarget"])
 	strip()

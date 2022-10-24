@@ -940,7 +940,12 @@ bool mame_ui_manager::update_and_render(render_container &container)
 	// display the internal pointers
 	bool const pointer_update = m_pointers_changed;
 	m_pointers_changed = false;
+#if defined(MAMEUI_NEWUI)
+	// MAMEUI: (NEWUI) system pointer always on; MAME pointer always off
+	if (is_menu_active() && machine().options().ui_mouse())
+#else
 	if (!is_menu_active() || machine().options().ui_mouse())
+#endif
 	{
 		const float cursor_size = 0.6 * get_line_height();
 		for (auto const &pointer : m_display_pointers)

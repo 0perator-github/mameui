@@ -312,7 +312,7 @@ void windows_osd_interface::process_events()
 }
 
 
-
+#if !defined(MAMEUI_NEWUI) // MAMEUI: This callback is replaced when the NewUI is enabled
 //============================================================
 //  winwindow_video_window_proc_ui
 //  (window thread)
@@ -322,6 +322,7 @@ static LRESULT CALLBACK winwindow_video_window_proc_ui(HWND wnd, UINT message, W
 {
 	return win_window_info::video_window_proc(wnd, message, wparam, lparam);
 }
+#endif
 
 //============================================================
 //  is_mame_window
@@ -669,8 +670,10 @@ void winwindow_update_cursor_state(running_machine &machine)
 		// hide cursor
 		window.hide_pointer();
 
+#if !defined(MAMEUI_NEWUI) // MAMEUI: allow windowed mode when NewUI is enabled.
 		// clip pointer to game video window
 		window.capture_pointer();
+#endif
 	}
 	else
 	{
@@ -977,6 +980,17 @@ int win_window_info::complete_create()
 	// get the monitor bounds
 	osd_rect monitorbounds = monitor()->position_size();
 
+#if defined(MAMEUI_NEWUI) // MAMEUI: Add support for the menubar when NewUI is enabled.
+	HMENU menubar = nullptr;
+
+	// create the window menu if needed
+	windows_options &winoptions = downcast<windows_options&>(machine().options());
+	if (winoptions.show_menubar())
+	{
+		if (winwindow_create_menu(machine(), &menubar))
+			return 1;
+	}
+#endif
 	// are we in worker UI mode?
 	HWND hwnd;
 	const char *attach_window_name = downcast<windows_options &>(machine().options()).attach_window();
@@ -999,7 +1013,11 @@ int win_window_info::complete_create()
 				monitorbounds.left() + 20, monitorbounds.top() + 20,
 				monitorbounds.left() + 100, monitorbounds.top() + 100,
 				nullptr,//(osd_common_t::s_window_list != nullptr) ? osd_common_t::s_window_list->m_hwnd : nullptr,
+#if defined(MAMEUI_NEWUI) // MAMEUI: Create the window with a menubar.
+				menubar,
+#else
 				nullptr,
+#endif
 				GetModuleHandleUni(),
 				nullptr);
 	}

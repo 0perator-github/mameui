@@ -578,6 +578,18 @@ function osdmodulestargetconf()
 			"oleaut32",
 			"winmm",
 		}
+		if BUILD_UI_TARGET then
+			links {
+				"comctl32",
+				"comdlg32",
+				"dinput8",
+				"ole32",
+				"psapi",
+				"shlwapi",
+				"uuid",
+				"uxtheme",
+			}
+		end
 	elseif _OPTIONS["targetos"]=="macosx" then
 		links {
 			"AudioUnit.framework",

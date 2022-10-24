@@ -210,7 +210,10 @@ int winwindow_ui_is_paused(running_machine &machine);
 
 void winwindow_dispatch_message(running_machine &machine, MSG const &message);
 
-
+#if defined(MAMEUI_NEWUI) // MAMEUI: Enable support for the NewUI menubar in MAMEUI (uses external linkage)
+extern LRESULT CALLBACK winwindow_video_window_proc_ui(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam);
+extern int winwindow_create_menu(running_machine &machine, HMENU *menus);
+#endif
 
 //============================================================
 //  rect_width / rect_height
