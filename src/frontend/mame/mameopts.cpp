@@ -58,6 +58,25 @@ void mame_options::parse_standard_inis(emu_options &options, std::ostream &error
 		else
 			parse_one_ini(options, "horizont", OPTION_PRIORITY_ORIENTATION_INI, &error_stream);
 
+#if defined(MAMEUI_WINAPP) // MAMEUI: commit 0562745 removed system type flags.
+		switch (cursystem->flags & machine_flags::MASK_TYPE)
+		{
+		case machine_flags::TYPE_ARCADE:
+			parse_one_ini(options, "arcade", OPTION_PRIORITY_SYSTYPE_INI, &error_stream);
+			break;
+		case machine_flags::TYPE_CONSOLE:
+			parse_one_ini(options, "console", OPTION_PRIORITY_SYSTYPE_INI, &error_stream);
+			break;
+		case machine_flags::TYPE_COMPUTER:
+			parse_one_ini(options, "computer", OPTION_PRIORITY_SYSTYPE_INI, &error_stream);
+			break;
+		case machine_flags::TYPE_OTHER:
+			parse_one_ini(options, "othersys", OPTION_PRIORITY_SYSTYPE_INI, &error_stream);
+			break;
+		default:
+			break;
+		}
+#endif
 		machine_config config(*cursystem, options);
 		for (const screen_device &device : screen_device_enumerator(config.root_device()))
 		{
@@ -91,8 +110,9 @@ void mame_options::parse_standard_inis(emu_options &options, std::ostream &error
 	int gparent = (parent != -1) ? driver_list::clone(parent) : -1;
 	if (gparent != -1)
 		parse_one_ini(options, driver_list::driver(gparent).name, OPTION_PRIORITY_GPARENT_INI, &error_stream);
-	if (parent != -1)
-		parse_one_ini(options, driver_list::driver(parent).name, OPTION_PRIORITY_PARENT_INI, &error_stream);
+	if (parent != -1)   // MAMEUI: Ignore slots and images unless it is the gamename INI file.
+		parse_parent_ini(options, driver_list::driver(parent).name, OPTION_PRIORITY_PARENT_INI, &error_stream);
+
 	parse_one_ini(options, cursystem->name, OPTION_PRIORITY_DRIVER_INI, &error_stream);
 }
 
@@ -198,5 +218,38 @@ void mame_options::populate_hashpath_from_args_and_inis(emu_options &options, co
 		catch (options_exception &)
 		{
 		}
+	}
+}
+
+
+//------------------------------------------------------------------------------------------
+//  parse_parent_ini - parse the game INI file - we don't want to inherit slots and software
+//------------------------------------------------------------------------------------------
+
+// MAMEUI: this was added by the MESSUI Team
+void mame_options::parse_parent_ini(emu_options &options, const char *basename, int priority, std::ostream *error_stream)
+{
+	// don't parse if it has been disabled
+	if (!options.read_config())
+		return;
+
+	// open the file; if we fail, that's ok
+	emu_file file(options.ini_path(), OPEN_FLAG_READ);
+	osd_printf_verbose("Attempting load of %s.ini\n", basename);
+	std::error_condition filerr = file.open(std::string(basename) + ".ini");
+	if (filerr)
+		return;
+
+	// parse the file
+	osd_printf_verbose("Parsing %s.ini\n", basename);
+	try
+	{
+		options.parse_parent_file((util::core_file&)file, priority, priority < OPTION_PRIORITY_DRIVER_INI, false);
+	}
+	catch (options_exception &ex)
+	{
+		if (error_stream)
+			util::stream_format(*error_stream, "While parsing %s:\n%s\n", file.fullpath(), ex.message());
+		return;
 	}
 }
