@@ -305,18 +305,6 @@ void windows_osd_interface::process_events()
 	process_events(true, false);
 }
 
-
-
-//============================================================
-//  winwindow_video_window_proc_ui
-//  (window thread)
-//============================================================
-
-static LRESULT CALLBACK winwindow_video_window_proc_ui(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam)
-{
-	return win_window_info::video_window_proc(wnd, message, wparam, lparam);
-}
-
 //============================================================
 //  is_mame_window
 //============================================================
@@ -663,8 +651,10 @@ void winwindow_update_cursor_state(running_machine &machine)
 		// hide cursor
 		window.hide_pointer();
 
+#if !defined(MAMEUI_NEWUI)
 		// clip pointer to game video window
-		window.capture_pointer();
+		window.capture_pointer();    // MAMEUI: I can guess why, but it needs to be verified.
+#endif
 	}
 	else
 	{
@@ -964,6 +954,7 @@ int win_window_info::complete_create()
 {
 	RECT client;
 	int tempwidth, tempheight;
+	HMENU menubar = nullptr;
 	HDC dc;
 
 	assert(GetCurrentThreadId() == window_threadid);
@@ -971,6 +962,15 @@ int win_window_info::complete_create()
 	// get the monitor bounds
 	osd_rect monitorbounds = monitor()->position_size();
 
+#if defined(MAMEUI_NEWUI)
+	// create the window menu if needed
+	windows_options &winoptions = downcast<windows_options&>(machine().options());
+	if (winoptions.show_menubar())
+	{
+		if (winwindow_create_menu(machine(), &menubar))
+			return 1;
+	}
+#endif
 	// are we in worker UI mode?
 	HWND hwnd;
 	const char *attach_window_name = downcast<windows_options &>(machine().options()).attach_window();
@@ -993,7 +993,7 @@ int win_window_info::complete_create()
 				monitorbounds.left() + 20, monitorbounds.top() + 20,
 				monitorbounds.left() + 100, monitorbounds.top() + 100,
 				nullptr,//(osd_common_t::s_window_list != nullptr) ? osd_common_t::s_window_list->m_hwnd : nullptr,
-				nullptr,
+				menubar,
 				GetModuleHandleUni(),
 				nullptr);
 	}

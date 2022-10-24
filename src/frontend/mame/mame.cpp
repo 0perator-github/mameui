@@ -169,7 +169,8 @@ void mame_machine_manager::start_luaengine()
 		{
 			plugin_options::plugin *p = m_plugins->find(incl);
 			if (!p)
-				fatalerror("Fatal error: Could not load plugin: %s\n", incl);
+//              fatalerror("Fatal error: Could not load plugin: %s\n", incl);
+				osd_printf_warning("Could not load plugin: %s\n", incl); // MAMEUI: Switched fatalerror for warning again. Wonder why?
 			p->m_start = true;
 		}
 
@@ -178,7 +179,8 @@ void mame_machine_manager::start_luaengine()
 		{
 			plugin_options::plugin *p = m_plugins->find(excl);
 			if (!p)
-				fatalerror("Fatal error: Unknown plugin: %s\n", excl);
+//              fatalerror("Fatal error: Unknown plugin: %s\n", excl);
+				osd_printf_warning("Unknown plugin: %s\n", excl);  // MAMEUI: Switched fatalerror for warning again.
 			p->m_start = false;
 		}
 	}
@@ -188,7 +190,8 @@ void mame_machine_manager::start_luaengine()
 	{
 		plugin_options::plugin *p = m_plugins->find(OPTION_CONSOLE);
 		if (!p)
-			fatalerror("Fatal error: Console plugin not found.\n");
+//          fatalerror("Fatal error: Console plugin not found.\n");
+			osd_printf_warning("Console plugin not found.\n");  // MAMEUI: Switched fatalerror for warning again.
 
 		p->m_start = true;
 	}
