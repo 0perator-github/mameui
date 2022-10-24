@@ -117,6 +117,10 @@
 // input options
 #define WINOPTION_DUAL_LIGHTGUN         "dual_lightgun"
 
+#if defined(MAMEUI_NEWUI) // MAMEUI: Add a Identifier for the NewUI menubar option.
+// window options
+#define WINOPTION_SHOW_MENUBAR          "show_menubar"
+#endif
 
 //============================================================
 //  TYPE DEFINITIONS
@@ -227,6 +231,11 @@ public:
 
 	// input options
 	bool dual_lightgun() const { return bool_value(WINOPTION_DUAL_LIGHTGUN); }
+
+#if defined(MAMEUI_NEWUI) // MAMEUI: Enables access to the 'Show Menubar' setting when NewUI is enabled.
+	// NewUI configuration options
+	bool show_menubar() const { return bool_value(WINOPTION_SHOW_MENUBAR); }
+#endif
 };
 
 #endif // MAME_OSD_WINDOWS_WINOPTS_H
