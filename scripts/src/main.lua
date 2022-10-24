@@ -1,5 +1,5 @@
 -- license:BSD-3-Clause
--- copyright-holders:MAMEdev Team
+-- copyright-holders:MAMEdev Team, 0perator
 
 ---------------------------------------------------------------------------
 --
@@ -10,15 +10,11 @@
 ---------------------------------------------------------------------------
 
 function mainProject(_target, _subtarget)
-local projname
+	local projname
 if (_OPTIONS["SOURCES"] == nil) and (_OPTIONS["SOURCEFILTER"] == nil) then
-	if (_target == _subtarget) then
-		projname = _target
-	else
-		projname = _target .. _subtarget
-	end
+	projname = iif (PSEUDO_TARGET == _subtarget, _target, _target .. _subtarget)
 else
-	projname = _subtarget
+	projname = iif (PSEUDO_TARGET == _subtarget, _target, _subtarget)
 end
 	project (projname)
 	uuid (os.uuid(_target .. "_" .. _subtarget))
@@ -122,11 +118,17 @@ end
 	end
 
 if (STANDALONE~=true) then
-	findfunction("linkProjects_" .. _OPTIONS["target"] .. "_" .. _OPTIONS["subtarget"])(_OPTIONS["target"], _OPTIONS["subtarget"])
+	findfunction("linkProjects_" .. PSEUDO_TARGET .. "_" .. _OPTIONS["subtarget"])(PSEUDO_TARGET, _OPTIONS["subtarget"])
 end
 if (STANDALONE~=true) then
 	links {
 		"frontend",
+	}
+end
+if BUILD_UI_TARGET then
+--  kind "WindowedApp"
+	links {
+		_OPTIONS["target"] .. "_winapp",
 	}
 end
 	links {
@@ -228,8 +230,18 @@ end
 		ext_includedir("flac"),
 	}
 
+
+local rcincdir = nil
+if BUILD_UI_TARGET then -- MAMEUI: Using a different path for MAMEUI's project resources.
+	rcincdir = MAME_DIR .. "scripts/resources/windows/mameui/" .. _subtarget
+	if not os.isdir(rcincdir) then
+		rcincdir = MAME_DIR .. "scripts/resources/windows/mameui/mame"
+	end
+else
+	rcincdir = MAME_DIR .. "scripts/resources/windows/" .. _target
+end
 	resincludedirs {
-		MAME_DIR .. "scripts/resources/windows/" .. _target,
+		rcincdir,
 		GEN_DIR  .. "resource",
 	}
 
@@ -268,33 +280,33 @@ if (STANDALONE~=true) then
 		}
 	end
 
-	local rcincfile = MAME_DIR .. "scripts/resources/windows/" .. _target .. "/" .. _subtarget ..".rc"
+	local rcincfile = rcincdir .. "/" .. _subtarget .. ".rc"
 	if not os.isfile(rcincfile) then
-		rcincfile = MAME_DIR .. "scripts/resources/windows/mame/mame.rc"
+		rcincfile = rcincdir .. "/mame.rc"
 		resincludedirs {
-			MAME_DIR .. "scripts/resources/windows/mame",
+			rcincdir,
 		}
 	end
 
-	local mainfile = MAME_DIR .. "src/" .. _target .. "/" .. _subtarget .. ".cpp"
+	local mainfile = MAME_DIR .. "src/" .. PSEUDO_TARGET .. "/" .. _subtarget .. ".cpp"
 	if not os.isfile(mainfile) then
-		mainfile = MAME_DIR .. "src/" .. _target .. "/" .. _target .. ".cpp"
+		mainfile = MAME_DIR .. "src/" .. PSEUDO_TARGET .. "/" .. PSEUDO_TARGET .. ".cpp"
 	end
 	files {
 		mainfile,
 		GEN_DIR .. "version.cpp",
-		GEN_DIR .. _target .. "/" .. _subtarget .. "/drivlist.cpp",
+		GEN_DIR .. PSEUDO_TARGET .. "/" .. _subtarget .. "/drivlist.cpp",
 	}
 
-	local driverlist = MAME_DIR .. "src/" .. _target .. "/" .. _target .. ".lst"
-	local driverssrc = GEN_DIR .. _target .. "/" .. _subtarget .. "/drivlist.cpp"
+	local driverlist = MAME_DIR .. "src/" .. PSEUDO_TARGET .. "/" .. PSEUDO_TARGET .. ".lst"
+	local driverssrc = GEN_DIR .. PSEUDO_TARGET .. "/" .. _subtarget .. "/drivlist.cpp"
 	if _OPTIONS["SOURCES"] ~= nil then
 		dependency {
 			{ driverssrc, driverlist, true },
 		}
 		custombuildtask {
 			{
-				GEN_DIR .. _target .."/" .. _subtarget .. ".flt" ,
+				GEN_DIR .. PSEUDO_TARGET .."/" .. _subtarget .. ".flt" ,
 				driverssrc,
 				{ MAME_DIR .. "scripts/build/makedep.py", driverlist },
 				{
@@ -318,13 +330,13 @@ if (STANDALONE~=true) then
 				}
 			},
 		}
-	elseif os.isfile(MAME_DIR .. "src/" .. _target .."/" .. _subtarget ..".flt") then
+	elseif os.isfile(MAME_DIR .. "src/" .. PSEUDO_TARGET .. "/" .. _subtarget .. ".flt") then
 		dependency {
 			{ driverssrc, driverlist, true },
 		}
 		custombuildtask {
 			{
-				MAME_DIR .. "src/" .. _target .. "/" .. _subtarget .. ".flt",
+				MAME_DIR .. "src/" .. PSEUDO_TARGET .. "/" .. _subtarget .. ".flt",
 				driverssrc,
 				{ MAME_DIR .. "scripts/build/makedep.py", driverlist },
 				{
@@ -333,10 +345,10 @@ if (STANDALONE~=true) then
 				}
 			},
 		}
-	elseif os.isfile(MAME_DIR .. "src/" .._target .. "/" .. _subtarget ..".lst") then
+	elseif os.isfile(MAME_DIR .. "src/" .. PSEUDO_TARGET .. "/" .. _subtarget .. ".lst") then
 		custombuildtask {
 			{
-				MAME_DIR .. "src/" .. _target .. "/" .. _subtarget .. ".lst",
+				MAME_DIR .. "src/" .. PSEUDO_TARGET .. "/" .. _subtarget .. ".lst",
 				driverssrc,
 				{ MAME_DIR .. "scripts/build/makedep.py" },
 				{

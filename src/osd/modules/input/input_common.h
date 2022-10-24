@@ -259,7 +259,18 @@ protected:
 
 	osd::input_manager &  manager() { assert(m_manager); return *m_manager; }
 	const osd_options *   options() const { return m_options; }
+#if defined(MAMEUI_WINAPP) // MAMEUI: Using our own entry point just in case.
+private:
+	static inline bool    m_newui_polling_input = false;
+
+public:
+	static void           set_newui_polling(bool polling) { m_newui_polling_input = polling; }
+
+protected:
+	bool                  background_input() const { return m_background_input || m_newui_polling_input; }
+#else
 	bool                  background_input() const { return m_background_input; }
+#endif
 
 	virtual void before_poll() { }
 
