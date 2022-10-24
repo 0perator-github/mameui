@@ -1,0 +1,226 @@
+
+// MAME/MAMEUI headers
+#include "mui_str.h"
+#include "mui_tcs.h"
+#include "mui_tcsconv.h"
+#include "mui_wcs.h"
+
+//============================================================
+//  mui_tcstring_from_utf8
+//============================================================
+
+size_t mui_tcstring_from_utf8(TCHAR *tcstring, size_t dest_size, const char *utf8string)
+{
+	bool buffer_created = false;
+	size_t result = 0;
+
+	if (!utf8string || !iswgraph(utf8string[0]))
+		return result;
+
+
+	if (!dest_size)
+		dest_size = mui_strlen(utf8string) + 1;
+
+	if (!tcstring)
+	{
+		tcstring = new TCHAR[dest_size];
+		buffer_created = true;
+	}
+#ifdef _UNICODE
+	wchar_t *utf8_to_wcs = mui_wcstring_from_utf8(utf8string);
+	result = !_tcscpy_s(tcstring, dest_size, utf8_to_wcs);
+	delete[] utf8_to_wcs;
+#else
+	result = !_tcscpy_s(tcstring, dest_size-1, utf8string);
+#endif
+
+	if (!result && buffer_created)
+		delete[] tcstring;
+	else
+		result = mui_tcslen(tcstring);
+
+	return result;
+}
+
+size_t mui_tcstring_from_utf8(TCHAR *tcstring, const char *utf8string)
+{
+	return mui_tcstring_from_utf8(tcstring, 0, utf8string);
+}
+
+TCHAR *mui_tcstring_from_utf8(const char *utf8string)
+{
+	const size_t dest_size = mui_strlen(utf8string) + 1;
+	TCHAR *tcstring = new TCHAR[dest_size];
+	if (!mui_tcstring_from_utf8(tcstring, dest_size, utf8string))
+	{
+		delete[] tcstring;
+		tcstring = 0;
+	}
+
+	return tcstring;
+}
+
+
+//============================================================
+//  tcsstring_from_wcstring
+//============================================================
+
+size_t mui_tcstring_from_wcstring(TCHAR *tcstring, size_t dest_size, const wchar_t *wcstring)
+{
+	bool buffer_created = false;
+	size_t result = 0;
+
+	if (!wcstring || !iswgraph(wcstring[0]))
+		return result;
+
+	if (!dest_size)
+		dest_size = mui_wcslen(wcstring) + 1;
+
+	if (!tcstring)
+	{
+		tcstring = new TCHAR[dest_size];
+		buffer_created = true;
+	}
+
+#ifdef _UNICODE
+	result = !_tcscpy_s(tcstring, dest_size, wcstring);
+#else
+	char *wcs_to_utf8 = mui_utf8_from_wcstring(wcstring);
+	result = !_tcscpy_s(tcstring, dest_size, wcs_to_utf8);
+	delete[] wcs_to_utf8;
+#endif
+
+	if (!result && buffer_created)
+		delete[] tcstring;
+	else
+		result = mui_tcslen(tcstring);
+
+	return result;
+}
+
+size_t mui_tcstring_from_wcstring(TCHAR * tcstring, const wchar_t *wcstring)
+{
+	return mui_tcstring_from_wcstring(tcstring, 0, wcstring);
+}
+
+TCHAR *mui_tcstring_from_wcstring(const wchar_t *wcstring)
+{
+	const size_t dest_size = mui_wcslen(wcstring) + 1;
+	TCHAR * tcstring = new TCHAR[dest_size];
+	if (!mui_tcstring_from_wcstring(tcstring, dest_size, wcstring))
+	{
+		delete[] tcstring;
+		tcstring = 0;
+	}
+
+	return tcstring;
+}
+
+
+//============================================================
+//  mui_utf8_from_tcstring
+//============================================================
+
+size_t mui_utf8_from_tcstring(char *utf8string, size_t dest_size, const TCHAR *tcstring)
+{
+	size_t result = 0;
+
+	if (!tcstring || !_istgraph(wcstring[0]))
+		return result;
+
+	if (!dest_size)
+		dest_size = mui_tcslen(tcstring) + 1;
+
+#ifdef _UNICODE
+	result = mui_utf8_from_wcstring(utf8string, dest_size, reinterpret_cast<const wchar_t *>(tcstring));
+#else
+	if (!utf8string)
+	{
+		utf8string = new char[dest_size];
+		buffer_created = true;
+	}
+
+	result = !strcpy_s(utf8string, dest_size, reinterpret_cast<const char*>(tcstring)));
+#endif
+
+	if (!result && buffer_created)
+		delete[] tcstring;
+	else
+		result = mui_tcslen(tcstring);
+
+	return result;
+}
+
+size_t mui_utf8_from_tcstring(char *utf8string, const TCHAR *tcstring)
+{
+	return mui_utf8_from_tcstring(utf8string, 0, tcstring);
+}
+
+char *mui_utf8_from_tcstring(const TCHAR *tcstring)
+{
+	const size_t dest_size = mui_tcslen(tcstring) + 1;
+	char *utf8string = new char[dest_size];
+	if(!mui_utf8_from_tcstring(utf8string, dest_size, tcstring))
+	{
+		delete[] utf8string;
+		utf8string = 0;
+	}
+
+	return utf8string;
+}
+
+
+//============================================================
+//  mui_wcstring_from_tcstring
+//============================================================
+
+size_t mui_wcstring_from_tcstring(wchar_t* wcstring, size_t dest_size, const TCHAR* tcstring)
+{
+	bool buffer_created = false;
+	size_t result = 0;
+
+	if (!tcstring || !_istgraph(tcstring[0]))
+		return result;
+
+	if (!dest_size)
+		dest_size = mui_tcslen(tcstring) + 1;
+
+	if (!wcstring)
+	{
+		wcstring = new wchar_t[dest_size];
+		buffer_created = true;
+	}
+
+#ifdef _UNICODE
+	result = !wcscpy_s(wcstring, dest_size, tcstring);
+#else
+	wchar_t* utf8_to_wcs = mui_wcstring_from_utf8(tcstring);
+	result = !wcscpy_s(wcstring, dest_size, utf8_to_wcs);
+	delete[] utf8_to_wcs;
+#endif
+
+	if (!result && buffer_created)
+		delete[] wcstring;
+	else
+		result = mui_wcslen(wcstring);
+
+	return result;
+}
+
+size_t mui_wcstring_from_tcstring(wchar_t* wcstring, const TCHAR* tcstring)
+{
+	return mui_wcstring_from_tcstring(wcstring, 0, tcstring);
+}
+
+wchar_t* mui_wcstring_from_tcstring(const TCHAR* tcstring)
+{
+	const size_t dest_size = mui_tcslen(tcstring) + 1;
+	wchar_t* wcstring = new wchar_t[dest_size];
+	if (!mui_wcstring_from_tcstring(wcstring, dest_size, tcstring))
+	{
+		delete[] wcstring;
+		wcstring = 0;
+	}
+
+	return wcstring;
+}

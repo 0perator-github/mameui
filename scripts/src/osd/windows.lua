@@ -15,12 +15,24 @@ dofile("modules.lua")
 function maintargetosdoptions(_target,_subtarget)
 	osdmodulestargetconf()
 
-	configuration { "mingw*" }
-		links {
-			"mingw32",
+	if BUILD_UI_TARGET then -- MAMEUI: Extra configuration settings.
+		configuration { "mingw*" }
+		linkoptions {
+			"-lmingw32",
 		}
 
-	configuration { }
+		configuration { }
+			links {
+				"uxtheme",
+			}
+	else
+		configuration { "mingw*" }
+			links {
+				"mingw32",
+			}
+
+		configuration { }
+	end
 
 	if _OPTIONS["USE_SDL"] == "1" then
 		links {
@@ -173,6 +185,31 @@ project ("osd_" .. _OPTIONS["osd"])
 		MAME_DIR .. "src/osd/modules/debugger/win/uimetrics.h",
 		MAME_DIR .. "src/osd/modules/debugger/win/debugwin.h",
 	}
+
+	if (_OPTIONS["USE_NEWUI"] == "1") then
+		includedirs {
+		MAME_DIR .. "src/frontend/mame",
+		MAME_DIR .. "src/mameui/winapp",
+		}
+
+		if not BUILD_UI_TARGET then
+			files {
+				MAME_DIR .. "src/mameui/winapp/mui_str.cpp",
+				MAME_DIR .. "src/mameui/winapp/mui_str.h",
+				MAME_DIR .. "src/mameui/winapp/mui_strconv.cpp",
+				MAME_DIR .. "src/mameui/winapp/mui_strconv.h",
+			}
+		end
+
+		files {
+			MAME_DIR .. "src/mameui/winapp/newui.cpp",
+			MAME_DIR .. "src/mameui/winapp/newui.h",
+		}
+	else
+		files {
+			MAME_DIR .. "src/osd/windows/winmenu.cpp",
+		}
+	end
 
 
 project ("ocore_" .. _OPTIONS["osd"])

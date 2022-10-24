@@ -415,8 +415,8 @@ public:
 	std::string& software_load_warnings_message() { return m_softwarningstring; }
 
 	/* return the number of BAD_DUMP/NO_DUMP warnings we generated */
-	int knownbad() const { return m_knownbad; }
-
+	int knownbad() const { return 0;/*m_knownbad;*/ }   // MAMEUI: I don't get this one never a bad dump? Need to look at this again...
+														// I might find the answer in the commit logs.
 	/* ----- disk handling ----- */
 
 	/* return a pointer to the CHD file associated with the given region */

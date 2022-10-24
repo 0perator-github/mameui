@@ -35,12 +35,14 @@ jobs:
             cc: gcc
             cxx: g++
             subtarget: mame
-            executable: mame
+            executable: mameui
           - compiler: clang
+#            ar: llvm-ar
             cc: clang
             cxx: clang++
+#            archopts: -fuse-ld=lld
             subtarget: tiny
-            executable: mametiny
+            executable: mameuitiny
     steps:
     - uses: msys2/setup-msys2@v2
       with:
@@ -51,10 +53,12 @@ jobs:
     - name: Build
       env:
         MINGW64: "/mingw64"
-        OVERRIDE_AR: "llvm-ar"
+#        OVERRIDE_AR: "llvm-ar"
+        OVERRIDE_AR: ${{ matrix.ar }}
         OVERRIDE_CC: ${{ matrix.cc }}
         OVERRIDE_CXX: ${{ matrix.cxx }}
-        ARCHOPTS: "-fuse-ld=lld"
+#        ARCHOPTS: "-fuse-ld=lld"
+        ARCHOPTS: ${{ matrix.archopts }}
         SUBTARGET: ${{ matrix.subtarget }}
         TOOLS: 1
       run: make -j3
