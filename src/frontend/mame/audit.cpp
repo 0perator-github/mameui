@@ -512,9 +512,29 @@ media_auditor::summary media_auditor::summarize(const char *name, std::ostream *
 		if (output)
 		{
 			if (name)
+#if defined(MAMEUI_WINAPP) // MAMEUI: clarify the difference between media types
+			{
+				if (record.type() == media_type::DISK)
+					util::stream_format(*output, "%-12s: %s%s", name, record.name(), ".chd"); // MESSUI: include .chd for disks
+				else if (record.type() == media_type::SAMPLE)
+					util::stream_format(*output, "%-12s: %s%s", name, record.name(), ".wav"); // MESSUI: include .wav for samples
+				else
+					util::stream_format(*output, "%-12s: %s", name, record.name());
+			}
+			else
+			{
+				if (record.type() == media_type::DISK)
+					util::stream_format(*output, "%s%s", record.name(), ".chd"); // MESSUI: include .chd for disks
+				else if (record.type() == media_type::SAMPLE)
+					util::stream_format(*output, "%s%s", record.name(), ".wav"); // MESSUI: include .wav for samples
+				else
+					util::stream_format(*output, "%s", record.name());
+			}
+#else
 				util::stream_format(*output, "%-12s: %s", name, record.name());
 			else
 				util::stream_format(*output, "%s", record.name());
+#endif
 			if (record.expected_length() > 0)
 				util::stream_format(*output, " (%d bytes)", record.expected_length());
 			*output << " - ";
@@ -740,3 +760,96 @@ media_auditor::audit_record::audit_record(const char *name, media_type type)
 	, m_shared_device(nullptr)
 {
 }
+#if defined(MAMEUI_WINAPP) // MAMEUI: add our own summarize method.
+
+//-------------------------------------------------
+//  winui_summarize - same as summarize, but only
+//  report problems that the user can fix.
+//-------------------------------------------------
+
+media_auditor::summary media_auditor::winui_summarize(const char *name, std::ostream *output) const // MAMEUI: Need to refactor this function later.
+{
+	if (m_record_list.empty())
+		return NONE_NEEDED;
+
+	// loop over records
+	summary overall_status = CORRECT;
+	for (audit_record const &record : m_record_list)
+	{
+		// skip anything that's fine
+		switch (record.substatus())
+		{
+		case audit_substatus::GOOD:
+			[[fallthrough]];
+		case audit_substatus::GOOD_NEEDS_REDUMP:
+			[[fallthrough]];
+		case audit_substatus::FOUND_NODUMP:
+			[[fallthrough]];
+		case audit_substatus::NOT_FOUND_NODUMP:
+			[[fallthrough]];
+		case audit_substatus::NOT_FOUND_OPTIONAL:
+			continue;
+		default:
+			break;
+		}
+
+		// output the game name, file name, and length (if applicable)
+		if (output)
+		{
+			if (name)
+			{
+				if (record.type() == media_type::DISK)
+					util::stream_format(*output, "%-12s: %s%s", name, record.name(), ".chd");
+				else
+					util::stream_format(*output, "%-12s: %s", name, record.name());
+			}
+			else
+			{
+				if (record.type() == media_type::DISK)
+					util::stream_format(*output, "%s%s", record.name(), ".chd");
+				else
+					util::stream_format(*output, "%s", record.name());
+			}
+			if (record.expected_length() > 0)
+				util::stream_format(*output, " (%d bytes)", record.expected_length());
+			*output << " - ";
+		}
+
+		// use the substatus for finer details
+		summary best_new_status = INCORRECT;
+		switch (record.substatus())
+		{
+		case audit_substatus::FOUND_BAD_CHECKSUM:
+			if (output)
+			{
+				util::stream_format(*output, "INCORRECT CHECKSUM:\n");
+				util::stream_format(*output, "EXPECTED: %s\n", record.expected_hashes().macro_string());
+				util::stream_format(*output, "   FOUND: %s\n", record.actual_hashes().macro_string());
+			}
+			break;
+
+		case audit_substatus::FOUND_WRONG_LENGTH:
+			if (output) util::stream_format(*output, "INCORRECT LENGTH: %d bytes\n", record.actual_length());
+			break;
+
+		case audit_substatus::NOT_FOUND:
+			if (output)
+			{
+				std::add_pointer_t<device_type> const shared_device = record.shared_device();
+				if (shared_device)
+					util::stream_format(*output, "NOT FOUND (%s)\n", shared_device->shortname());
+				else
+					util::stream_format(*output, "NOT FOUND\n");
+			}
+			break;
+
+		default:
+			break;  //assert(false);
+		}
+
+		// downgrade the overall status if necessary
+		overall_status = (std::max)(overall_status, best_new_status);
+	}
+	return overall_status;
+}
+#endif
