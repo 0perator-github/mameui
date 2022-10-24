@@ -187,7 +187,11 @@ static int is_double_click_start(int argc);
 //  main
 //============================================================
 
+#if defined(MAMEUI_WINAPP) // MAMEUI: Using our own entry point just in case.
+int mame_main(int argc, char *argv[])
+#else
 int main(int argc, char *argv[])
+#endif // MAMEUI_WINAPP
 {
 #if defined(_UCRT)
 	SetConsoleOutputCP(CP_UTF8);
