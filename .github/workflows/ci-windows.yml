@@ -34,7 +34,7 @@ jobs:
             cc: gcc
             cxx: g++
             subtarget: mame
-            executable: mame
+            executable: mameui
           - compiler: clang-x64
             os: windows-latest
             msys: MINGW64
@@ -42,7 +42,7 @@ jobs:
             cc: clang
             cxx: clang++
             subtarget: tiny
-            executable: mametiny
+            executable: mameuitiny
           - compiler: clang-arm64
             os: windows-11-arm
             msys: CLANGARM64
@@ -51,7 +51,7 @@ jobs:
             cc: clang
             cxx: clang++
             subtarget: mame
-            executable: mame
+            executable: mameui
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -66,10 +66,11 @@ jobs:
         fetch-depth: 0
     - name: Build
       env:
-        OVERRIDE_AR: "llvm-ar"
+        MINGW64: "/mingw64"
+#        OVERRIDE_AR: "llvm-ar"
         OVERRIDE_CC: ${{ matrix.cc }}
         OVERRIDE_CXX: ${{ matrix.cxx }}
-        ARCHOPTS: "-fuse-ld=lld"
+#        ARCHOPTS: "-fuse-ld=lld"
         SUBTARGET: ${{ matrix.subtarget }}
         TOOLS: 1
       run: make -j3
