@@ -739,7 +739,7 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 						[&warning](const std::reference_wrapper<const std::string> &img)    { warning << "\"" << img.get() << "\""; },
 						[&warning]()                                                        { warning << ","; });
 
-				ui::menu_file_manager::force_file_manager(*this, machine().render().ui_container(), warning.str().c_str());
+				ui::menu_file_manager::force_file_manager(*this, machine().render().ui_container(), warning.str().c_str()); // MAMEUI: Reverted. MAMEUI comments this line out.
 			}
 			break;
 		}
@@ -865,7 +865,12 @@ bool mame_ui_manager::update_and_render(render_container &container)
 	// display the internal pointers
 	bool const pointer_update = m_pointers_changed;
 	m_pointers_changed = false;
+#if defined(MAMEUI_NEWUI)
+	// MAMEUI: (NEWUI) system pointer always on; MAME pointer always off
+	if (is_menu_active() && machine().options().ui_mouse())
+#else
 	if (!is_menu_active() || machine().options().ui_mouse())
+#endif
 	{
 		const float cursor_size = 0.6 * get_line_height();
 		for (auto const &pointer : m_display_pointers)
@@ -1846,7 +1851,7 @@ std::vector<ui::menu_item> mame_ui_manager::slider_init(running_machine &machine
 	}
 
 	// add CPU overclocking (cheat only)
-	if (machine.options().cheat())
+	if (machine.options().cheat())  // MAMEUI: Reverted this. Was commented out for MAMEUI
 	{
 		for (device_execute_interface &exec : execute_interface_enumerator(machine.root_device()))
 		{
@@ -1875,7 +1880,7 @@ std::vector<ui::menu_item> mame_ui_manager::slider_init(running_machine &machine
 		std::string screen_desc = machine_info().get_screen_desc(screen);
 
 		// add refresh rate tweaker
-		if (machine.options().cheat())
+		if (machine.options().cheat())  // MAMEUI: here too...
 		{
 			std::string str = string_format(_("%1$s Refresh Rate"), screen_desc);
 			slider_alloc(std::move(str), -10000, 0, 10000, 1000, std::bind(&mame_ui_manager::slider_refresh, this, std::ref(screen), _1, _2));
