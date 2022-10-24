@@ -149,6 +149,7 @@ private:
 
 	// internal state
 	bool                        m_parsed;
+	std::unique_ptr<emu_file>   m_software_list_file;
 	std::string                 m_filename;
 	std::string                 m_shortname;
 	std::string                 m_description;

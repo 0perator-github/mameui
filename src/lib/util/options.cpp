@@ -342,7 +342,8 @@ void core_options::entry::validate(const std::string &data)
 	case option_type::HEADER:
 	default:
 		// anything else is invalid
-		throw options_error_exception("Attempted to set invalid option %s\n", name());
+		throw options_error_exception("Attempted to set invalid option %s\n", name());    // MAMEUI: 0perator,"I want to see why. before I disable this line."
+//      break;
 	}
 }
 
@@ -1326,3 +1327,90 @@ void core_options::simple_entry::revert(int priority_hi, int priority_lo)
 		set_priority(OPTION_PRIORITY_DEFAULT);
 	}
 }
+
+//-------------------------------------------------
+//  parse_parent_file - practically the same as
+//  'parse_ini_file' except that it ignores lines
+//  that contain the words "SLOT" and "IMAGE" so
+//  slots and images are not copied to the clone
+//-------------------------------------------------
+
+void core_options::parse_parent_file(util::core_file &inifile, int priority, bool ignore_unknown_options, bool always_override)
+{
+	std::ostringstream error_stream;
+	condition_type condition = condition_type::NONE;
+
+	// loop over lines in the file
+	char buffer[4096];
+	while (inifile.gets(buffer, std::size(buffer)) != nullptr)
+	{
+		// find the extent of the name
+		char *optionname;
+		for (optionname = buffer; *optionname != 0; optionname++)
+			if (!isspace((uint8_t)*optionname))
+				break;
+
+		// MAMEUI: I got some ideas, but definately this is gonna need another looking at.
+//      if (*optionname == '#')
+//      {
+//          if (optionname[2] == 'S' && optionname[3] == 'L' && optionname[4] == 'O' && optionname[5] == 'T' )
+//              break;
+//          if (optionname[2] == 'I' && optionname[3] == 'M' && optionname[4] == 'A' && optionname[5] == 'G' )
+//              break;
+//      }
+		if (strncmp(optionname, "# IMAGE", 7) == 0 || strncmp(optionname, "# SLOT", 6) == 0)    // MAMEUI: Maybe not as fast , but more comprehensible.
+			break;
+
+		// skip comments
+		if (*optionname == 0 || *optionname == '#')
+			continue;
+
+		// scan forward to find the first space
+		char *temp;
+		for (temp = optionname; *temp != 0; temp++)
+			if (isspace((uint8_t)*temp))
+				break;
+
+		// if we hit the end early, print a warning and continue
+		if (*temp == 0)
+		{
+			condition = std::max(condition, condition_type::WARN);
+			util::stream_format(error_stream, "Warning: invalid line in INI: %s", buffer);
+			continue;
+		}
+
+		// NULL-terminate
+		*temp++ = 0;
+		char *optiondata = temp;
+
+		// scan the data, stopping when we hit a comment
+		bool inquotes = false;
+		for (temp = optiondata; *temp != 0; temp++)
+		{
+			if (*temp == '"')
+				inquotes = !inquotes;
+			if (*temp == '#' && !inquotes)
+				break;
+		}
+		*temp = 0;
+
+		// find our entry
+		entry::shared_ptr curentry = get_entry(optionname);
+		if (!curentry)
+		{
+			if (!ignore_unknown_options)
+			{
+				condition = std::max(condition, condition_type::WARN);
+				util::stream_format(error_stream, "Warning: unknown option in INI: %s\n", optionname);
+			}
+			continue;
+		}
+
+		// set the new data
+		do_set_value(*curentry, trim_spaces_and_quotes(optiondata), priority, error_stream, condition, true);
+	}
+
+	// did we have any errors that may need to be aggregated?
+	throw_options_exception_if_appropriate(condition, error_stream);
+}
+
